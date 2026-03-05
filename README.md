@@ -17,18 +17,6 @@ A comprehensive, modular Streamlit-based web application that automates the typi
 - **📊 Model Evaluation** - Detailed performance metrics and visualizations
 - **🚀 Model Deployment** - Export models and generate FastAPI prediction services
 
-## 📋 Table of Contents
-
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Project Structure](#project-structure)
-- [Usage Guide](#usage-guide)
-- [API Reference](#api-reference)
-- [Configuration](#configuration)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
-
 ## 🔧 Installation
 
 ### Prerequisites
