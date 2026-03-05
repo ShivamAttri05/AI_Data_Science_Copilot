@@ -1,0 +1,94 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# =========================
+# Virtual Environments
+# =========================
+venv/
+.env/
+env/
+ENV/
+.venv/
+
+# =========================
+# Environment Variables / Secrets
+# =========================
+.env
+.env.*
+*.env
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# =========================
+# Streamlit Cache
+# =========================
+.streamlit/cache/
+.streamlit/credentials.toml
+
+# =========================
+# Jupyter / Notebook leftovers
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Data files (optional — uncomment if needed)
+# =========================
+# *.csv
+# *.xlsx
+# *.json
+# data/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# OS Generated Files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# VS Code / IDE Settings
+# =========================
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# =========================
+# Node (if you ever add frontend)
+# =========================
+node_modules/
+npm-debug.log*
+yarn.lock
+package-lock.json
+
+# =========================
+# Testing / Coverage
+# =========================
+.coverage
+htmlcov/
+.pytest_cache/
+
+# =========================
+# Temporary Files
+# =========================
+*.tmp
+*.bak
+*.swp
