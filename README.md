@@ -39,7 +39,7 @@ A comprehensive, modular Streamlit-based web application that automates the typi
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/ai-data-science-copilot.git
+git clone https://github.com/ShivamAttri05/AI_Data_Science_Copilot.git
 cd ai-data-science-copilot
 ```
 
