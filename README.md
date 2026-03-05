@@ -28,7 +28,7 @@ A comprehensive, modular Streamlit-based web application that automates the typi
 
 ```bash
 git clone https://github.com/ShivamAttri05/AI_Data_Science_Copilot.git
-cd ai-data-science-copilot
+cd AI_Data_Science_Copilot
 ```
 
 ### Step 2: Create Virtual Environment (Recommended)
@@ -323,7 +323,7 @@ CV_FOLDS=5
 #### Import Errors
 ```bash
 # Make sure you're in the project directory
-cd ai_data_science_copilot
+cd AI_Data_Science_Copilot
 
 # Reinstall dependencies
 pip install -r requirements.txt
