@@ -3,17 +3,19 @@ AI Data Science Copilot - Main Streamlit Application
 
 A comprehensive web application for automated data science workflows
 including data loading, quality checks, EDA, AI insights, AutoML,
-and model deployment.
+model predictions, and model deployment.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import plotly.express as px
+import plotly.graph_objects as go
 import os
 import sys
 from datetime import datetime
+import pickle
+from typing import Optional
 
 # Add modules to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -78,8 +80,6 @@ st.markdown("""
     .error-box {
         background-color: #f8d7da;
         padding: 1rem;
-        border-radius: 5px;
-        border-left: 4px solid #dc3545;
     }
     .metric-card {
         background-color: #f8f9fa;
@@ -97,6 +97,9 @@ st.markdown("""
         font-size: 0.9rem;
         color: #6c757d;
     }
+    .confidence-high { color: #28a745; font-weight: bold; font-size: 1.2rem; }
+    .confidence-med { color: #ffc107; font-weight: bold; font-size: 1.2rem; }
+    .confidence-low { color: #dc3545; font-weight: bold; font-size: 1.2rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -121,6 +124,13 @@ if 'best_model' not in st.session_state:
     st.session_state.best_model = None
 if 'analyzer' not in st.session_state:
     st.session_state.analyzer = None
+
+if 'predictions' not in st.session_state:
+    st.session_state.predictions = None
+if 'prediction_engine' not in st.session_state:
+    st.session_state.prediction_engine = None
+if 'prediction_model_path' not in st.session_state:
+    st.session_state.prediction_model_path = None
 
 
 def render_header():
@@ -149,6 +159,7 @@ def render_sidebar():
                 "🧠 AI Insights",
                 "🤖 AutoML Training",
                 "📊 Model Evaluation",
+                "🔮 Predictions",
                 "🚀 Deployment"
             ]
         )
@@ -750,18 +761,19 @@ def render_automl():
             st.error("Please select at least one model to train")
             return
         
-        with st.spinner("Training models... This may take a few minutes"):
+        with st.spinner("Training models & generating reasoning layer... This may take a few minutes"):
             try:
-                # Initialize AutoML engine
+                # Initialize new AutoML engine
                 engine = AutoMLEngine(
                     test_size=test_size,
                     cv_folds=cv_folds
                 )
                 
-                # Run training
+                # Run complete training pipeline
                 results = engine.auto_train(
                     df,
                     target_col,
+                    problem_type=st.session_state.problem_type,
                     models_to_train=selected_models
                 )
                 
@@ -777,49 +789,80 @@ def render_automl():
     # Display results
     if st.session_state.automl_results:
         results = st.session_state.automl_results
-        engine = st.session_state.automl_engine
         
-        st.markdown("#### 🏆 Training Results")
+        st.markdown("---")
+        st.markdown("#### 🏆 Winning Model Reasoning")
         
-        # Best model
-        st.success(f"**Best Model:** {results['best_model']}")
+        # Extract the new reasoning layer
+        reasoning = results['reasoning']
+        confidence = reasoning['confidence']
         
-        # Model comparison
+        # Setup confidence styling
+        conf_class = "confidence-high" if confidence >= 80 else "confidence-med" if confidence >= 50 else "confidence-low"
+        
+        col_win, col_conf = st.columns([2, 1])
+        with col_win:
+            st.success(f"**Best Model:** {results['best_model']} (Selected via penalised CV)")
+        with col_conf:
+            st.markdown(f"<div style='text-align: right; padding-top: 10px;'>Pipeline Confidence: <span class='{conf_class}'>{confidence}/100</span></div>", unsafe_allow_html=True)
+            st.caption(f"<div style='text-align: right;'>{reasoning['confidence_explanation']}</div>", unsafe_allow_html=True)
+
+        # Reasoning details
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            st.markdown("##### ✅ Why it won")
+            st.info(reasoning['why_it_won'])
+            st.markdown("**Strengths:**")
+            for strength in reasoning['strengths'][:3]:
+                st.markdown(f"- {strength}")
+                
+        with rc2:
+            st.markdown("##### ⚠️ When it might fail")
+            st.warning("\n".join([f"- {fail}" for fail in reasoning['when_it_fails']]))
+            
+        # Model comparison table
+        st.markdown("#### 📊 Model Comparison & Tradeoffs")
         comparison = results['comparison']
-        st.markdown("#### Model Comparison")
-        st.dataframe(comparison, use_container_width=True)
         
-        # Visualization
-        if st.session_state.problem_type in ['binary_classification', 'multiclass_classification']:
-            metric = 'accuracy'
-        else:
-            metric = 'r2'
+        # Visualizing the tradeoffs
+        with st.expander("View Full Tradeoff Analysis", expanded=True):
+            tradeoff_df = pd.DataFrame(reasoning['tradeoff_analysis'])
+            st.dataframe(
+                tradeoff_df[['model', 'cv_mean', 'test_score', 'overfit_status', 'interpretability', 'tradeoff_summary']],
+                use_container_width=True
+            )
+        
+        # Performance Visualization
+        metric = 'accuracy' if st.session_state.problem_type in ['binary_classification', 'multiclass_classification'] else 'r2'
         
         fig = px.bar(
             comparison,
             x='model',
             y=metric,
-            title=f'Model Comparison - {metric.upper()}'
+            color='overfit_status',
+            color_discrete_map={'none': '#28a745', 'mild': '#ffc107', 'severe': '#dc3545'},
+            title=f'Model Performance ({metric.upper()}) & Overfit Risk'
         )
         st.plotly_chart(fig, use_container_width=True)
         
         # Feature importance
         if results['feature_importance'] is not None:
-            st.markdown("#### Feature Importance")
-            fi_df = results['feature_importance'].head(15)
-            fig = px.bar(
+            st.markdown("#### Top Feature Importance")
+            fi_df = results['feature_importance'].head(10)
+            fig_fi = px.bar(
                 fi_df,
                 x='importance',
                 y='feature',
                 orientation='h',
-                title='Top 15 Feature Importances'
+                title='What drives the model?'
             )
-            st.plotly_chart(fig, use_container_width=True)
+            fig_fi.update_layout(yaxis={'categoryorder': 'total ascending'})
+            st.plotly_chart(fig_fi, use_container_width=True)
 
 
 def render_model_evaluation():
     """Render the model evaluation page."""
-    st.markdown('<h2 class="section-header">📊 Model Evaluation</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">📊 Model Diagnostics & Evaluation</h2>', unsafe_allow_html=True)
     
     if not st.session_state.automl_results:
         st.warning("⚠️ Please train models first in the AutoML Training section")
@@ -830,7 +873,10 @@ def render_model_evaluation():
     
     # Select model to evaluate
     model_names = list(results['model_results'].keys())
-    selected_model = st.selectbox("Select model to evaluate", model_names)
+    
+    # Default to the winning model
+    default_ix = model_names.index(results['best_model']) if results['best_model'] in model_names else 0
+    selected_model = st.selectbox("Select model to evaluate", model_names, index=default_ix)
     
     if selected_model:
         model_result = results['model_results'][selected_model]
@@ -838,32 +884,40 @@ def render_model_evaluation():
         if 'error' in model_result:
             st.error(f"Error in model: {model_result['error']}")
             return
-        
-        # Initialize analyzer
-        analyzer = ExperimentAnalyzer(
-            problem_type=st.session_state.problem_type,
-            class_names=engine.label_encoder.classes_ if engine.label_encoder else None
-        )
-        
-        st.session_state.analyzer = analyzer
-        
-        # Get predictions
-        y_test = model_result['predictions']  # This is actually y_pred, need to get actual y_test
-        y_pred = model_result['predictions']
-        y_pred_proba = model_result.get('probabilities')
-        
-        # For demonstration, we'll use the predictions we have
-        # In a real scenario, we'd store y_test from the training process
-        
+            
         tabs = st.tabs([
-            "Metrics",
-            "Visualizations",
+            "🩺 Copilot Diagnostics", 
+            "📈 Metrics", 
             "Detailed Report"
         ])
         
+        # Diagnostics Tab utilizing Bias-Variance & Overfitting Logic
         with tabs[0]:
-            st.markdown("#### Performance Metrics")
+            st.markdown("### Model Health Check")
             
+            # Overfitting section
+            of = model_result['overfitting']
+            of_color = "green" if of['status'] == 'none' else "orange" if of['status'] == 'mild' else "red"
+            
+            st.markdown(f"#### Overfitting Status: <span style='color:{of_color}'>{of['status'].upper()}</span>", unsafe_allow_html=True)
+            st.write(of['details'])
+            
+            st.markdown("---")
+            
+            # Bias-Variance section
+            bv = model_result['bias_variance']
+            st.markdown("#### Bias-Variance Decomposition")
+            
+            col_b, col_v, col_d = st.columns(3)
+            col_b.metric("Bias Level", bv['bias_level'].title())
+            col_v.metric("Variance Level", bv['variance_level'].title())
+            col_d.metric("Dominant Error", bv['dominant_error'].title())
+            
+            st.info(f"**Interpretation:** {bv['interpretation']}")
+            st.success(f"**Recommendation:** {bv['recommendation']}")
+
+        with tabs[1]:
+            st.markdown("#### Performance Metrics (Test Set)")
             metrics = model_result['metrics']
             
             if st.session_state.problem_type in ['binary_classification', 'multiclass_classification']:
@@ -876,9 +930,6 @@ def render_model_evaluation():
                     st.metric("Recall", f"{metrics.get('recall', 0):.4f}")
                 with col4:
                     st.metric("F1 Score", f"{metrics.get('f1', 0):.4f}")
-                
-                if 'roc_auc' in metrics:
-                    st.metric("ROC AUC", f"{metrics['roc_auc']:.4f}")
             else:
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
@@ -890,34 +941,28 @@ def render_model_evaluation():
                 with col4:
                     st.metric("MAPE", f"{metrics.get('mape', 0):.2f}%")
             
-            # Cross-validation scores
-            st.markdown("#### Cross-Validation Scores")
+            st.markdown("#### Cross-Validation Stability")
             cv_scores = model_result['cv_scores']
-            st.write(f"Mean: {np.mean(cv_scores):.4f} (+/- {np.std(cv_scores):.4f})")
+            st.write(f"Mean Score: **{np.mean(cv_scores):.4f}** (Std Dev: **{np.std(cv_scores):.4f}**)")
             
             fig = px.line(
                 x=range(1, len(cv_scores) + 1),
                 y=cv_scores,
                 markers=True,
-                title='Cross-Validation Scores'
+                title='Score Variance Across Folds'
             )
-            fig.update_xaxes(title='Fold')
+            fig.update_xaxes(title='CV Fold')
             fig.update_yaxes(title='Score')
             st.plotly_chart(fig, use_container_width=True)
-        
-        with tabs[1]:
-            st.markdown("#### Visualizations")
             
-            if st.session_state.problem_type in ['binary_classification', 'multiclass_classification']:
-                st.info("Confusion matrix and ROC curve visualizations would appear here")
-                st.write("Note: Full evaluation requires storing test set labels during training")
-            else:
-                st.info("Prediction vs Actual and Residuals plots would appear here")
-                st.write("Note: Full evaluation requires storing test set values during training")
-        
         with tabs[2]:
-            st.markdown("#### Detailed Report")
-            st.json(model_result['metrics'])
+            st.markdown("#### Raw Training Results")
+            st.json({
+                "metrics": model_result['metrics'],
+                "train_metrics": model_result['train_metrics'],
+                "overfitting": model_result['overfitting'],
+                "bias_variance": model_result['bias_variance']
+            })
 
 
 def render_deployment():
