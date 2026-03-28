@@ -1,7 +1,7 @@
 """
 AI Insights Module for AI Data Science Copilot.
 
-This module uses Google's Gemini API to analyze datasets and provide
+This module uses Google's GenAI SDK to analyze datasets and provide
 intelligent insights, feature recommendations, and ML problem identification.
 """
 
@@ -19,13 +19,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Try to import Gemini
+# Try to import the new Google GenAI SDK
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    logger.warning("google-generativeai not installed. AI insights will be disabled.")
+    logger.warning("google-genai not installed. AI insights will be disabled. To enable, run: pip install google-genai")
 
 
 class AIInsightsGenerator:
@@ -44,13 +45,14 @@ class AIInsightsGenerator:
             api_key: Gemini API key (if None, will try to load from environment)
         """
         self.api_key = api_key or os.getenv('GEMINI_API_KEY')
-        self.model = None
+        self.client = None
+        self.model_name = 'gemini-2.5-flash'  # Upgraded to 2.5-flash as default for the new SDK
         self.is_available = False
         
         if GEMINI_AVAILABLE and self.api_key:
             try:
-                genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                # Initialize the new Client
+                self.client = genai.Client(api_key=self.api_key)
                 self.is_available = True
                 logger.info("Gemini API configured successfully")
             except Exception as e:
@@ -207,8 +209,14 @@ class AIInsightsGenerator:
         # Construct the prompt
         prompt = self._construct_prompt(metadata, target_col, problem_type)
         
-        # Call Gemini
-        response = self.model.generate_content(prompt)
+        # Call Gemini using the new SDK pattern
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            )
+        )
         
         # Parse the response
         try:

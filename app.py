@@ -337,7 +337,7 @@ def render_dataset_upload():
             
             # Preview
             st.markdown("#### Data Preview")
-            st.dataframe(df.head(10), use_container_width=True)
+            st.dataframe(df.head(10), width='stretch')
             
             # Column information safely calculated
             st.markdown("#### Column Information")
@@ -351,7 +351,7 @@ def render_dataset_upload():
                 'Missing': missing_data.values,
                 'Missing %': missing_pct.values.round(2)
             })
-            st.dataframe(col_info, use_container_width=True)
+            st.dataframe(col_info, width='stretch')
             
             # Target selection
             st.markdown("#### Target Column Selection (Optional)")
@@ -444,7 +444,7 @@ def render_data_quality():
                     for col, data in missing['missing_by_column'].items()
                 ]).sort_values('Percentage', ascending=False)
                 
-                st.dataframe(missing_df, use_container_width=True)
+                st.dataframe(missing_df, width='stretch')
                 
                 # Visualization
                 fig = px.bar(
@@ -453,7 +453,7 @@ def render_data_quality():
                     y='Percentage',
                     title='Missing Values by Column (%)'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.success("✅ No missing values found!")
         
@@ -477,7 +477,7 @@ def render_data_quality():
                     for col, data in outliers['outliers_by_column'].items()
                 ]).sort_values('Percentage', ascending=False)
                 
-                st.dataframe(outlier_df, use_container_width=True)
+                st.dataframe(outlier_df, width='stretch')
             else:
                 st.success("✅ No significant outliers detected!")
         
@@ -556,11 +556,11 @@ def render_eda():
             
             if 'numeric' in stats:
                 st.markdown("#### Numeric Statistics")
-                st.dataframe(stats['numeric'], use_container_width=True)
+                st.dataframe(stats['numeric'], width='stretch')
             
             if 'categorical' in stats:
                 st.markdown("#### Categorical Statistics")
-                st.dataframe(stats['categorical'], use_container_width=True)
+                st.dataframe(stats['categorical'], width='stretch')
         
         with tabs[2]:
             corr = results['correlation_analysis']
@@ -569,12 +569,12 @@ def render_eda():
                 st.markdown("#### Correlation Heatmap")
                 fig = engine.generate_correlation_heatmap(use_plotly=True)
                 if fig:
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
             
             if 'high_correlation_pairs' in corr and corr['high_correlation_pairs']:
                 st.markdown("#### Highly Correlated Pairs")
                 corr_df = pd.DataFrame(corr['high_correlation_pairs'])
-                st.dataframe(corr_df, use_container_width=True)
+                st.dataframe(corr_df, width='stretch')
         
         with tabs[3]:
             st.markdown("#### Feature Distributions")
@@ -586,7 +586,7 @@ def render_eda():
                 
                 fig = engine.generate_distribution_plots([selected_col], use_plotly=True)
                 if fig:
-                    st.plotly_chart(fig[0][1], use_container_width=True)
+                    st.plotly_chart(fig[0][1], width='stretch')
                 
                 # Distribution statistics
                 dist_stats = results['distributions']['distribution_stats'].get(selected_col, {})
@@ -618,7 +618,7 @@ def render_eda():
                     orientation='h',
                     title=f'Top Categories in {selected_cat}'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("No categorical columns available")
     else:
@@ -680,7 +680,7 @@ def render_ai_insights():
         if 'important_features' in insights and insights['important_features']:
             st.markdown("#### ⭐ Important Features")
             features_df = pd.DataFrame(insights['important_features'])
-            st.dataframe(features_df, use_container_width=True)
+            st.dataframe(features_df, width='stretch')
         
         # ML Problem Type
         if 'ml_problem_type' in insights:
@@ -701,7 +701,7 @@ def render_ai_insights():
         if 'model_recommendations' in insights and insights['model_recommendations']:
             st.markdown("#### 🤖 Model Recommendations")
             models_df = pd.DataFrame(insights['model_recommendations'])
-            st.dataframe(models_df, use_container_width=True)
+            st.dataframe(models_df, width='stretch')
         
         # Data Quality Issues
         if 'data_quality_issues' in insights and insights['data_quality_issues']:
@@ -842,7 +842,7 @@ def render_automl():
             tradeoff_df = pd.DataFrame(reasoning['tradeoff_analysis'])
             st.dataframe(
                 tradeoff_df[['model', 'cv_mean', 'test_score', 'overfit_status', 'interpretability', 'tradeoff_summary']],
-                use_container_width=True
+                width='stretch'
             )
         
         # Performance Visualization
@@ -856,7 +856,7 @@ def render_automl():
             color_discrete_map={'none': '#28a745', 'mild': '#ffc107', 'severe': '#dc3545'},
             title=f'Model Performance ({metric.upper()}) & Overfit Risk'
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # Feature importance
         if results['feature_importance'] is not None:
@@ -870,7 +870,7 @@ def render_automl():
                 title='What drives the model?'
             )
             fig_fi.update_layout(yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig_fi, use_container_width=True)
+            st.plotly_chart(fig_fi, width='stretch')
 
 
 def render_model_evaluation():
@@ -966,7 +966,7 @@ def render_model_evaluation():
             )
             fig.update_xaxes(title='CV Fold')
             fig.update_yaxes(title='Score')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
         with tabs[2]:
             st.markdown("#### Raw Training Results")
@@ -1124,7 +1124,7 @@ def render_predictions():
                             st.caption(f"Feature #{idx+1}")
             
             # Submit button
-            submitted = st.form_submit_button("🔮 Make Prediction", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("🔮 Make Prediction", type="primary", width='stretch')
             
             if submitted:
                 try:
@@ -1159,7 +1159,7 @@ def render_predictions():
                                         })
                                         fig = px.bar(proba_df, x='Class', y='Probability', 
                                                      title='Class Probabilities')
-                                        st.plotly_chart(fig, use_container_width=True)
+                                        st.plotly_chart(fig, width='stretch')
                             except Exception as e:
                                 st.warning(f"Could not compute probabilities: {e}")
                         
@@ -1219,7 +1219,7 @@ def render_predictions():
                         st.success(f"✅ Generated {len(predictions)} predictions!")
                         
                         # Display results
-                        st.dataframe(df_results, use_container_width=True)
+                        st.dataframe(df_results, width='stretch')
                         
                         # Download button
                         csv = df_results.to_csv(index=False).encode('utf-8')
@@ -1228,13 +1228,13 @@ def render_predictions():
                             data=csv,
                             file_name="batch_predictions.csv",
                             mime="text/csv",
-                            use_container_width=True
+                            width='stretch'
                         )
                         
                         # Visualization for regression
                         if problem_type == 'regression' and len(predictions) > 1:
                             fig = px.histogram(predictions, title='Distribution of Predictions')
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                         
             except Exception as e:
                 st.error(f"❌ Batch prediction error: {e}")
