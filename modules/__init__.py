@@ -1,5 +1,5 @@
 """
-AI Data Science Copilot - Modules Package
+Explainable ML Pipeline Analyzer - Modules Package
 
 This package contains all the core modules for the AI Data Science Copilot.
 """

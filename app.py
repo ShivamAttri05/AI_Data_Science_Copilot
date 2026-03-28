@@ -1,9 +1,8 @@
 """
-AI Data Science Copilot - Main Streamlit Application
+Explainable ML Pipeline Analyzer - Main Streamlit Application
 
-A comprehensive web application for automated data science workflows
-including data loading, quality checks, EDA, AI insights, AutoML,
-model predictions, and model deployment.
+A comprehensive web application for transparent ML workflows with critical
+failure detection, reasoned model recommendations, and production deployment.
 """
 
 import streamlit as st
@@ -30,12 +29,13 @@ from modules.experiment_analysis import ExperimentAnalyzer
 from modules.model_deployment import ModelDeployer
 
 # Import utilities
-from utils.helpers import get_dataframe_info, create_directory_structure
+from utils.helpers import create_directory_structure
+from modules.data_loader import load_sample_dataset
 
 # Page configuration
 st.set_page_config(
-    page_title="AI Data Science Copilot",
-    page_icon="🤖",
+    page_title="Explainable ML Pipeline Analyzer", 
+    page_icon="🔬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -80,6 +80,8 @@ st.markdown("""
     .error-box {
         background-color: #f8d7da;
         padding: 1rem;
+        border-left: 4px solid #dc3545;
+        border-radius: 5px;
     }
     .metric-card {
         background-color: #f8f9fa;
@@ -124,21 +126,24 @@ if 'best_model' not in st.session_state:
     st.session_state.best_model = None
 if 'analyzer' not in st.session_state:
     st.session_state.analyzer = None
-
 if 'predictions' not in st.session_state:
     st.session_state.predictions = None
 if 'prediction_engine' not in st.session_state:
     st.session_state.prediction_engine = None
 if 'prediction_model_path' not in st.session_state:
     st.session_state.prediction_model_path = None
+if 'feature_names' not in st.session_state:
+    st.session_state.feature_names = None
+if 'last_prediction' not in st.session_state:
+    st.session_state.last_prediction = None
 
 
 def render_header():
     """Render the application header."""
-    st.markdown('<h1 class="main-header">🤖 AI Data Science Copilot</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🔬 Explainable ML Pipeline Analyzer</h1>', unsafe_allow_html=True)
     st.markdown("""
     <p style="text-align: center; color: #6c757d; font-size: 1.1rem;">
-        Your intelligent assistant for end-to-end data science workflows
+        Transparent decision-making with critical failure detection & reasoned recommendations
     </p>
     """, unsafe_allow_html=True)
     st.divider()
@@ -184,9 +189,10 @@ def render_sidebar():
         st.markdown("""
         **About**
         
-        AI Data Science Copilot helps you go from raw data to 
-        deployed ML models with minimal coding.
+        Accelerates data science with transparent decision-making, 
+        failure detection, and reasoned model analysis.
         
+        Custom-built logic with optional AI assistance.
         Built with ❤️ using Streamlit
         """)
         
@@ -195,7 +201,7 @@ def render_sidebar():
 
 def render_home():
     """Render the home page."""
-    st.markdown('<h2 class="section-header">Welcome to AI Data Science Copilot</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">Welcome to Explainable ML Pipeline Analyzer</h2>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     
@@ -294,7 +300,6 @@ def render_dataset_upload():
                 df = loader.load_from_upload(uploaded_file)
                 st.success(f"✅ Successfully loaded **{uploaded_file.name}**")
             else:
-                from modules.data_loader import load_sample_dataset
                 df = load_sample_dataset(sample_dataset)
                 st.success(f"✅ Loaded sample dataset: **{sample_dataset}**")
             
@@ -313,30 +318,38 @@ def render_dataset_upload():
             # Display dataset info
             st.markdown('<h3 class="section-header">Dataset Overview</h3>', unsafe_allow_html=True)
             
-            info = loader.get_dataset_info()
+            # Calculate dataset metrics cleanly with pandas
+            n_rows = df.shape[0]
+            n_columns = df.shape[1]
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            categorical_cols = df.select_dtypes(exclude=[np.number]).columns
             
             # Metrics
             mcol1, mcol2, mcol3, mcol4 = st.columns(4)
             with mcol1:
-                st.metric("Rows", f"{info['n_rows']:,}")
+                st.metric("Rows", f"{n_rows:,}")
             with mcol2:
-                st.metric("Columns", info['n_columns'])
+                st.metric("Columns", n_columns)
             with mcol3:
-                st.metric("Numeric", len(info['numeric_columns']))
+                st.metric("Numeric", len(numeric_cols))
             with mcol4:
-                st.metric("Categorical", len(info['categorical_columns']))
+                st.metric("Categorical", len(categorical_cols))
             
             # Preview
             st.markdown("#### Data Preview")
             st.dataframe(df.head(10), use_container_width=True)
             
-            # Column information
+            # Column information safely calculated
             st.markdown("#### Column Information")
+            
+            missing_data = df.isnull().sum()
+            missing_pct = (missing_data / len(df)) * 100
+            
             col_info = pd.DataFrame({
-                'Column': info['column_names'],
-                'Type': [str(info['column_types'][col]) for col in info['column_names']],
-                'Missing': [info['missing_values'][col] for col in info['column_names']],
-                'Missing %': [info['missing_percentage'][col] for col in info['column_names']]
+                'Column': df.columns,
+                'Type': [str(dtype) for dtype in df.dtypes],
+                'Missing': missing_data.values,
+                'Missing %': missing_pct.values.round(2)
             })
             st.dataframe(col_info, use_container_width=True)
             
@@ -965,6 +978,306 @@ def render_model_evaluation():
             })
 
 
+def render_predictions():
+    """Render the predictions page with custom new data inputs."""
+    st.markdown('<h2 class="section-header">🔮 Make Predictions</h2>', unsafe_allow_html=True)
+    
+    if 'automl_engine' not in st.session_state or st.session_state.automl_engine is None:
+        st.warning("⚠️ Please complete **🤖 AutoML Training** first to get a trained model.")
+        st.info("→ Train a model, then return here for predictions on **new custom data**.")
+        return
+    
+    engine = st.session_state.automl_engine
+    problem_type = st.session_state.problem_type
+    
+    # Improved feature name recovery
+    def get_feature_names_from_pipeline(pipeline):
+        """Extract feature names from pipeline with better error handling."""
+        feature_names = []
+        
+        # Try to get from the preprocessor
+        if hasattr(pipeline, 'named_steps'):
+            preprocessor = pipeline.named_steps.get('preprocessor')
+            if preprocessor is not None:
+                try:
+                    # Try different methods to get feature names
+                    if hasattr(preprocessor, 'get_feature_names_out'):
+                        feature_names = preprocessor.get_feature_names_out().tolist()
+                    elif hasattr(preprocessor, 'feature_names_in_'):
+                        feature_names = preprocessor.feature_names_in_.tolist()
+                    elif hasattr(preprocessor, 'transformers_'):
+                        # Handle ColumnTransformer
+                        for name, transformer, columns in preprocessor.transformers_:
+                            if transformer == 'drop' or transformer is None:
+                                continue
+                            try:
+                                if hasattr(transformer, 'get_feature_names_out'):
+                                    trans_names = transformer.get_feature_names_out(columns)
+                                elif hasattr(transformer, 'feature_names_in_'):
+                                    trans_names = transformer.feature_names_in_.tolist()
+                                else:
+                                    trans_names = columns
+                                feature_names.extend(trans_names)
+                            except:
+                                feature_names.extend(columns)
+                except Exception as e:
+                    st.warning(f"Could not extract feature names from preprocessor: {e}")
+        
+        # If still empty, try to get from training data
+        if not feature_names and hasattr(engine, '_preprocessed_df'):
+            feature_names = engine._preprocessed_df.columns.tolist()
+        
+        # If still empty, try training data columns
+        if not feature_names and hasattr(engine, '_X_train_ref'):
+            feature_names = engine._X_train_ref.columns.tolist()
+        # Final fallback
+        if not feature_names:
+            feature_names = [f"feature_{i}" for i in range(10)]
+        
+        return feature_names
+    
+    # Get feature names with improved method
+    try:
+        feature_names = get_feature_names_from_pipeline(engine.best_model)
+        st.session_state.feature_names = feature_names
+        st.success(f"✅ Ready to predict! Model: **{st.session_state.best_model}** | Features: **{len(feature_names)}** | Type: **{problem_type}**")
+        
+        # Show feature preview
+        with st.expander("📋 View All Features"):
+            cols_per_row = 4
+            feature_cols = [feature_names[i:i+cols_per_row] for i in range(0, len(feature_names), cols_per_row)]
+            for row in feature_cols:
+                cols = st.columns(cols_per_row)
+                for i, feat in enumerate(row):
+                    with cols[i]:
+                        st.code(feat, language="text")
+        
+    except Exception as e:
+        st.error(f"⚠️ Feature extraction failed: {e}")
+        st.info("Using fallback feature names. You can still input values in the order below.")
+        
+        # Fallback: get from training data
+        if hasattr(engine, '_preprocessed_df'):
+            feature_names = engine._preprocessed_df.columns.tolist()
+            st.session_state.feature_names = feature_names
+        else:
+            # Last resort: create dummy feature names
+            feature_names = [f"feature_{i}" for i in range(10)]  # Assume 10 features
+            st.session_state.feature_names = feature_names
+            st.warning("⚠️ Using placeholder feature names. Please ensure you input values in the correct order.")
+    
+    tab1, tab2, tab3 = st.tabs(["🎯 Single Prediction", "📊 Batch Prediction", "💾 Load Saved Model"])
+    
+    with tab1:
+        st.markdown("### Enter values for each feature")
+        
+        # Create form for better UX
+        with st.form("prediction_form"):
+            input_data = {}
+            
+            # Create columns for better layout
+            cols_per_row = 3
+            for i in range(0, len(feature_names), cols_per_row):
+                row_cols = st.columns(cols_per_row)
+                for j in range(cols_per_row):
+                    idx = i + j
+                    if idx < len(feature_names):
+                        fname = feature_names[idx]
+                        
+                        # Detect feature type based on name and training data
+                        feature_type = "numeric"
+                        if hasattr(engine, '_preprocessed_df') and fname in engine._preprocessed_df.columns:
+                            col_data = engine._preprocessed_df[fname]
+                            if col_data.dtype == 'object' or col_data.dtype.name == 'category':
+                                feature_type = "categorical"
+                                unique_vals = col_data.unique()[:10]  # Top 10 unique values
+                        elif 'cat' in fname.lower() or 'category' in fname.lower():
+                            feature_type = "categorical"
+                        
+                        with row_cols[j]:
+                            if feature_type == "categorical":
+                                # For categorical features, try to get actual categories
+                                if hasattr(engine, '_preprocessed_df') and fname in engine._preprocessed_df.columns:
+                                    categories = engine._preprocessed_df[fname].unique().tolist()
+                                    input_data[fname] = st.selectbox(
+                                        f"**{fname}**",
+                                        options=categories,
+                                        key=f"single_{idx}"
+                                    )
+                                else:
+                                    input_data[fname] = st.text_input(
+                                        f"**{fname}**",
+                                        value="",
+                                        placeholder="Enter value",
+                                        key=f"single_{idx}"
+                                    )
+                            else:
+                                # Numeric features
+                                input_data[fname] = st.number_input(
+                                    f"**{fname}**",
+                                    value=0.0,
+                                    step=0.1,
+                                    format="%.4f",
+                                    key=f"single_{idx}"
+                                )
+                            
+                            st.caption(f"Feature #{idx+1}")
+            
+            # Submit button
+            submitted = st.form_submit_button("🔮 Make Prediction", type="primary", use_container_width=True)
+            
+            if submitted:
+                try:
+                    with st.spinner("Making prediction..."):
+                        # Create DataFrame with proper column order
+                        X_new = pd.DataFrame([input_data])[feature_names]
+                        
+                        # Make prediction
+                        prediction = engine.predict(X_new)[0]
+                        
+                        # Display results
+                        col_pred, col_prob = st.columns(2)
+                        with col_pred:
+                            if problem_type == 'regression':
+                                st.metric("**Predicted Value**", f"{prediction:.4f}")
+                            else:
+                                st.metric("**Predicted Class**", str(prediction))
+                        
+                        # Get probabilities for classification
+                        if problem_type != 'regression' and hasattr(engine.best_model, 'predict_proba'):
+                            try:
+                                X_processed = engine.preprocessor.transform(X_new)
+                                proba = engine.best_model.predict_proba(X_processed)[0]
+                                with col_prob:
+                                    st.metric("**Confidence**", f"{max(proba):.2%}")
+                                    
+                                    # Show probability distribution
+                                    if len(proba) <= 10:  # Only show if not too many classes
+                                        proba_df = pd.DataFrame({
+                                            'Class': range(len(proba)),
+                                            'Probability': proba
+                                        })
+                                        fig = px.bar(proba_df, x='Class', y='Probability', 
+                                                     title='Class Probabilities')
+                                        st.plotly_chart(fig, use_container_width=True)
+                            except Exception as e:
+                                st.warning(f"Could not compute probabilities: {e}")
+                        
+                        st.success("✅ Prediction complete!")
+                        st.balloons()
+                        
+                        # Store prediction in session state
+                        st.session_state.last_prediction = {
+                            'input': input_data,
+                            'prediction': prediction
+                        }
+                        
+                except Exception as e:
+                    st.error(f"❌ Prediction error: {e}")
+                    st.info("Make sure all required fields are filled correctly.")
+    
+    with tab2:
+        st.markdown("### Batch Predictions")
+        st.markdown("Upload a CSV file with new data. The file must contain all features exactly as shown above.")
+        
+        uploaded_file = st.file_uploader("Choose CSV file", type=['csv'], key="batch_upload")
+        
+        if uploaded_file:
+            try:
+                df_new = pd.read_csv(uploaded_file)
+                
+                # Validate columns
+                missing_cols = set(feature_names) - set(df_new.columns)
+                extra_cols = set(df_new.columns) - set(feature_names)
+                
+                if missing_cols:
+                    st.error(f"❌ Missing required columns: {', '.join(list(missing_cols))}")
+                    st.info("Your CSV must include all these columns.")
+                else:
+                    if extra_cols:
+                        st.warning(f"⚠️ Extra columns will be ignored: {', '.join(list(extra_cols))}")
+                        df_new = df_new[feature_names]
+                    
+                    # Make predictions
+                    with st.spinner("Making predictions..."):
+                        predictions = engine.predict(df_new)
+                        
+                        # Add predictions to dataframe
+                        df_results = df_new.copy()
+                        df_results['prediction'] = predictions
+                        
+                        # Add confidence for classification
+                        if problem_type != 'regression' and hasattr(engine.best_model, 'predict_proba'):
+                            try:
+                                X_processed = engine.preprocessor.transform(df_new)
+                                probas = engine.best_model.predict_proba(X_processed)
+                                df_results['confidence'] = np.max(probas, axis=1)
+                            except Exception as e:
+                                st.warning(f"Could not compute confidence scores: {e}")
+                        
+                        # Show results
+                        st.success(f"✅ Generated {len(predictions)} predictions!")
+                        
+                        # Display results
+                        st.dataframe(df_results, use_container_width=True)
+                        
+                        # Download button
+                        csv = df_results.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            label="📥 Download Predictions as CSV",
+                            data=csv,
+                            file_name="batch_predictions.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
+                        
+                        # Visualization for regression
+                        if problem_type == 'regression' and len(predictions) > 1:
+                            fig = px.histogram(predictions, title='Distribution of Predictions')
+                            st.plotly_chart(fig, use_container_width=True)
+                        
+            except Exception as e:
+                st.error(f"❌ Batch prediction error: {e}")
+    
+    with tab3:
+        st.markdown("### Load a Saved Model")
+        st.markdown("Upload a previously saved model (.pkl or .pickle) to make predictions without retraining.")
+        
+        model_file = st.file_uploader("Upload model file", type=['pkl', 'pickle'], key="model_load")
+        
+        if model_file:
+            try:
+                with st.spinner("Loading model..."):
+                    model_data = pickle.load(model_file)
+                    
+                    # Check model structure
+                    if isinstance(model_data, dict):
+                        st.session_state.prediction_engine = model_data
+                        st.success("✅ Model loaded successfully!")
+                        
+                        # Display model info if available
+                        if 'metadata' in model_data:
+                            metadata = model_data['metadata']
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.info(f"**Model:** {metadata.get('model_name', 'Unknown')}")
+                                st.info(f"**Problem Type:** {metadata.get('problem_type', 'Unknown')}")
+                            with col2:
+                                st.info(f"**Training Date:** {metadata.get('training_date', 'Unknown')}")
+                                if 'best_cv_score' in metadata:
+                                    st.info(f"**CV Score:** {metadata['best_cv_score']:.4f}")
+                        
+                        # Load feature names from metadata
+                        if 'metadata' in model_data and 'feature_names' in model_data['metadata']:
+                            st.session_state.feature_names = model_data['metadata']['feature_names']
+                            st.info(f"Features: {len(st.session_state.feature_names)}")
+                    else:
+                        st.error("Invalid model format. Please upload a valid model file.")
+                        
+            except Exception as e:
+                st.error(f"❌ Error loading model: {e}")
+
+
 def render_deployment():
     """Render the deployment page."""
     st.markdown('<h2 class="section-header">🚀 Model Deployment</h2>', unsafe_allow_html=True)
@@ -997,9 +1310,11 @@ def render_deployment():
                         'problem_type': st.session_state.problem_type,
                         'target_column': st.session_state.target_col,
                         'training_date': datetime.now().isoformat(),
-                        'best_cv_score': float(engine.results[engine.best_model_name]['cv_mean'])
+                        'best_cv_score': float(engine.results[engine.best_model_name]['cv_mean']),
+                        'feature_names': st.session_state.feature_names if st.session_state.feature_names else []
                     }
                     
+                    base_path = "d:/My_Projects/AI_Data_Science_Copilot"
                     filepath = deployer.save_model(
                         model=engine.best_model,
                         model_name=model_name,
@@ -1038,12 +1353,13 @@ def render_deployment():
                         preprocessor=engine.preprocessor,
                         metadata={
                             'problem_type': st.session_state.problem_type,
-                            'target_column': st.session_state.target_col
+                            'target_column': st.session_state.target_col,
+                            'feature_names': st.session_state.feature_names if st.session_state.feature_names else []
                         }
                     )
                     
                     # Get feature names
-                    feature_names = engine.feature_names if engine.feature_names else []
+                    feature_names = st.session_state.feature_names if st.session_state.feature_names else []
                     
                     # Generate API
                     api_dir = deployer.generate_fastapi_service(
@@ -1061,22 +1377,20 @@ def render_deployment():
                     cd api
                     pip install -r requirements.txt
                     uvicorn main:app --reload --port {port}
-                    ```
-                    
-                    #### API Documentation:
-                    - Swagger UI: http://localhost:{port}/docs
-                    - ReDoc: http://localhost:{port}/redoc
+                    API Documentation:
+                    Swagger UI: http://localhost:{port}/docs
+
+                    ReDoc: http://localhost:{port}/redoc
                     """.format(port=api_port))
-                    
+
                 except Exception as e:
                     st.error(f"❌ Error generating API: {e}")
-
 
 def main():
     """Main application function."""
     render_header()
     page = render_sidebar()
-    
+
     # Route to appropriate page
     if page == "🏠 Home":
         render_home()
@@ -1092,9 +1406,10 @@ def main():
         render_automl()
     elif page == "📊 Model Evaluation":
         render_model_evaluation()
+    elif page == "🔮 Predictions":
+        render_predictions()
     elif page == "🚀 Deployment":
         render_deployment()
-
 
 if __name__ == "__main__":
     main()

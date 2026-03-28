@@ -1,8 +1,9 @@
 """
-Data Quality Module for AI Data Science Copilot.
+Data Quality Module for Explainable ML Pipeline Analyzer.
 
 This module performs comprehensive data quality checks including
-missing values, duplicates, outliers, and class imbalance detection.
+missing values, duplicates, outliers, class imbalance, small datasets, 
+high noise levels, and data leakage risks.
 """
 
 import pandas as pd
@@ -35,20 +36,172 @@ class DataQualityChecker:
         self.issues = []
         self.warnings = []
     
+    def check_dataset_size(self) -> Dict[str, Any]:
+        """
+        Check if dataset is too small for reliable ML modeling.
+        """
+        n_rows = len(self.df)
+        n_cols = len(self.df.columns)
+        
+        result = {
+            'n_rows': n_rows,
+            'n_cols': n_cols,
+            'sample_size_per_feature': n_rows / n_cols if n_cols > 0 else 0,
+            'severity': 'none'
+        }
+        
+        if n_rows < 100:
+            result['severity'] = 'critical'
+            self.issues.append(
+                f"🚨 CRITICAL: Dataset too small ({n_rows} rows). "
+                f"ML models unreliable below 100-500 rows depending on complexity."
+            )
+        elif n_rows < 500:
+            result['severity'] = 'high'
+            self.warnings.append(
+                f"⚠️ HIGH RISK: Small dataset ({n_rows} rows). "
+                f"Use simple models (LR, RF); XGBoost/GB may overfit."
+            )
+        elif n_rows < 1000:
+            result['severity'] = 'medium'
+            self.warnings.append(f"ℹ️ Dataset modest ({n_rows} rows). CV stability may vary.")
+            
+        return result
+
+    def check_noise_level(self) -> Dict[str, Any]:
+        """
+        Estimate noise level via outlier prevalence and variance inconsistency.
+        """
+        numeric_cols = self.df.select_dtypes(include=[np.number]).columns
+        
+        noise_indicators = []
+        
+        for col in numeric_cols:
+            col_data = self.df[col].dropna()
+            if len(col_data) < 10:
+                continue
+                
+            # IQR outlier percentage
+            Q1 = col_data.quantile(0.25)
+            Q3 = col_data.quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = ((col_data < (Q1 - 1.5*IQR)) | (col_data > (Q3 + 1.5*IQR))).sum()
+            outlier_pct = outliers / len(col_data) * 100
+            
+            # Coefficient of variation (high CV = noisy)
+            if col_data.std() > 0:
+                cv = col_data.std() / col_data.mean() * 100
+            else:
+                cv = 0
+                
+            noise_indicators.append({
+                'column': col,
+                'outlier_pct': outlier_pct,
+                'cv': cv
+            })
+        
+        avg_outlier_pct = np.mean([ni['outlier_pct'] for ni in noise_indicators]) if noise_indicators else 0
+        avg_cv = np.mean([ni['cv'] for ni in noise_indicators]) if noise_indicators else 0
+        
+        result = {
+            'numeric_columns_analyzed': len(numeric_cols),
+            'avg_outlier_pct': round(avg_outlier_pct, 2),
+            'avg_cv': round(avg_cv, 2),
+            'noise_indicators': noise_indicators[:10],  # Top 10
+            'severity': 'none'
+        }
+        
+        if avg_outlier_pct > 20:
+            result['severity'] = 'high'
+            self.warnings.append(
+                f"⚠️ HIGH NOISE: {avg_outlier_pct:.1f}% outliers across numeric features. "
+                f"Tree models may memorize noise; prefer regularized models."
+            )
+        elif avg_outlier_pct > 10:
+            result['severity'] = 'medium'
+            self.warnings.append(f"Moderate noise detected ({avg_outlier_pct:.1f}% outliers).")
+            
+        if avg_cv > 200:
+            result['severity'] = 'high'
+            self.warnings.append(
+                f"⚠️ HIGH VARIABILITY: Average CV {avg_cv:.0f}%. Signals may be noisy."
+            )
+            
+        return result
+
+    def check_data_leakage_risk(self, target_col: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Detect potential data leakage risks (high target correlations, future leaks).
+        """
+        risks = []
+        
+        if target_col and target_col in self.df.columns:
+            target = self.df[target_col]
+            numeric_cols = self.df.select_dtypes(include=[np.number]).columns
+            
+            # High correlation with target (potential leakage)
+            for col in numeric_cols:
+                if col != target_col:
+                    corr = self.df[col].corr(target)
+                    if abs(corr) > 0.95:
+                        risks.append({
+                            'type': 'high_target_correlation',
+                            'column': col,
+                            'correlation': round(corr, 3),
+                            'risk': 'Feature too similar to target - potential leakage or redundancy'
+                        })
+            
+            # Check for potential time-based leakage (dates correlated with target)
+            datetime_cols = self.df.select_dtypes(include=['datetime64']).columns
+            for date_col in datetime_cols:
+                # Convert to numeric timestamp
+                timestamps = pd.to_numeric(self.df[date_col])
+                corr = timestamps.corr(pd.to_numeric(target))
+                if abs(corr) > 0.8:
+                    risks.append({
+                        'type': 'temporal_leakage',
+                        'column': date_col,
+                        'correlation': round(corr, 3),
+                        'risk': 'Date feature highly correlated with target - check for leakage'
+                    })
+        
+        # Near-perfect prediction from few features (information leakage)
+        if len(self.df.columns) > 0:
+            info_ratio = len(self.df) / len(self.df.columns)
+            if info_ratio < 5:
+                risks.append({
+                    'type': 'low_info_ratio',
+                    'n_rows': len(self.df),
+                    'n_cols': len(self.df.columns),
+                    'risk': f'Only {info_ratio:.1f} samples per feature - high leakage/overfit risk'
+                })
+        
+        result = {
+            'risks_detected': risks,
+            'n_risks': len(risks),
+            'severity': 'none' if not risks else 'high' if any('leak' in r['risk'].lower() for r in risks) else 'medium'
+        }
+        
+        if risks:
+            risk_msg = f"🚨 LEAKAGE RISKS: {len(risks)} potential issues detected"
+            if result['severity'] == 'high':
+                self.issues.append(risk_msg)
+            else:
+                self.warnings.append(risk_msg)
+        
+        return result
+
     def run_all_checks(self, target_col: Optional[str] = None) -> Dict[str, Any]:
         """
-        Run all data quality checks and generate a comprehensive report.
-        
-        Args:
-            target_col: Name of target column (if known)
-            
-        Returns:
-            Dictionary containing all check results
+        Run all data quality checks including NEW failure detection.
         """
-        logger.info("Running comprehensive data quality checks...")
+        logger.info("Running comprehensive data quality checks with failure detection...")
         
         self.report = {
             'overview': self._get_overview(),
+            'dataset_size': self.check_dataset_size(),
+            'noise_level': self.check_noise_level(),
+            'data_leakage_risk': self.check_data_leakage_risk(target_col),
             'missing_values': self.check_missing_values(),
             'duplicates': self.check_duplicates(),
             'outliers': self.check_outliers(),
@@ -56,19 +209,27 @@ class DataQualityChecker:
             'data_types': self.check_data_types(),
             'cardinality': self.check_cardinality(),
             'class_balance': self.check_class_balance(target_col) if target_col else None,
+            'critical_failures': [],
             'issues': [],
             'warnings': [],
             'recommendations': []
         }
         
-        # Compile issues and warnings
+        # Flag critical failures
+        if self.report['dataset_size']['severity'] == 'critical':
+            self.report['critical_failures'].append('DATASET_TOO_SMALL')
+        if self.report['noise_level']['severity'] == 'high':
+            self.report['critical_failures'].append('HIGH_NOISE')
+        if self.report['data_leakage_risk']['severity'] == 'high':
+            self.report['critical_failures'].append('LEAKAGE_RISK')
+        
         self._compile_issues()
         self._generate_recommendations()
         
         self.report['issues'] = self.issues
         self.report['warnings'] = self.warnings
         
-        logger.info(f"Data quality check complete. Found {len(self.issues)} issues, {len(self.warnings)} warnings.")
+        logger.info(f"Quality check complete. Critical failures: {len(self.report['critical_failures'])}")
         
         return self.report
     
