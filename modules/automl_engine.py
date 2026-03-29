@@ -52,6 +52,7 @@ from sklearn.model_selection import (
 )
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
+    FunctionTransformer,
     LabelEncoder,
     MinMaxScaler,
     OneHotEncoder,
@@ -341,7 +342,6 @@ class AutoMLEngine:
             transformers.append(("num", num_pipe, non_skewed_cols))
 
         if skewed_cols:
-            from sklearn.preprocessing import FunctionTransformer
             log_pipe = Pipeline([
                 ("imputer",  SimpleImputer(strategy=numeric_strategy)),
                 ("log1p",    FunctionTransformer(np.log1p, validate=False)),
@@ -367,6 +367,7 @@ class AutoMLEngine:
             )
             cat_pipe = Pipeline([
                 ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("astype_str", FunctionTransformer(lambda x: x.astype(str), validate=False)), # Fix for mixed types
                 ("encoder", encoder),
             ])
             transformers.append(("cat", cat_pipe, categorical_cols))
