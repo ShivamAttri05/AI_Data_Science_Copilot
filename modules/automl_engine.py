@@ -82,6 +82,10 @@ _HIGH_CARDINALITY          = 20   # nunique above which we use ordinal instead o
 _SKEW_THRESHOLD            = 1.0  # |skewness| above which we apply log1p to numeric
 _NEAR_ZERO_VAR_THRESHOLD   = 0.01 # variance below which a column is considered constant
 
+# ── Preprocessing Helpers ──────────────────────────────────────────────────────
+# Defined at the top level so they can be pickled successfully
+def _convert_to_str(x):
+    return x.astype(str)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # AutoML Engine
@@ -367,7 +371,7 @@ class AutoMLEngine:
             )
             cat_pipe = Pipeline([
                 ("imputer", SimpleImputer(strategy="most_frequent")),
-                ("astype_str", FunctionTransformer(lambda x: x.astype(str), validate=False)), # Fix for mixed types
+                ("astype_str", FunctionTransformer(_convert_to_str, validate=False)), # Fix for mixed types
                 ("encoder", encoder),
             ])
             transformers.append(("cat", cat_pipe, categorical_cols))
