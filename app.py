@@ -347,8 +347,8 @@ def _pipeline_progress():
     return [
         ("Dataset upload",     st.session_state.data_loaded),
         ("Data quality check", st.session_state.quality_report is not None),
-        ("EDA analysis",       st.session_state.eda_results   is not None),
-        ("AI insights",        st.session_state.ai_insights   is not None),
+        ("EDA analysis",       st.session_state.eda_results    is not None),
+        ("AI insights",        st.session_state.ai_insights    is not None),
         ("AutoML training",    st.session_state.automl_results is not None),
     ]
 
@@ -690,7 +690,7 @@ def render_data_quality():
     m2.metric("Columns",        overview['n_columns'])
     m3.metric("Memory (MB)",    overview['memory_usage_mb'])
     m4.metric("Critical issues", ni, delta=None if ni==0 else "action needed", delta_color="inverse")
-    m5.metric("Warnings",        nw, delta=None if nw==0 else "review advised", delta_color="off")
+    m5.metric("Warnings",       nw, delta=None if nw==0 else "review advised", delta_color="off")
 
     if report['issues']:
         for issue in report['issues']: st.error(f"🚨 {issue}")
@@ -1169,7 +1169,7 @@ def render_predictions():
         feature_names = get_feature_names_from_pipeline(engine.best_model)
         st.session_state.feature_names = feature_names
         c1,c2,c3 = st.columns(3)
-        c1.metric("Model",    st.session_state.best_model or "—")
+        c1.metric("Model",    st.session_state.automl_results.get("best_model", "—") if st.session_state.get("automl_results") else "—")
         c2.metric("Features", len(feature_names))
         c3.metric("Type",     (problem_type or "—").replace('_',' ').title())
 
@@ -1246,8 +1246,8 @@ def render_predictions():
                     if ec:
                         st.warning(f"Ignoring: {', '.join(sorted(ec))}")
                         df_new = df_new[feature_names]
-                    preds     = engine.predict(df_new)
-                    df_r      = df_new.copy()
+                    preds      = engine.predict(df_new)
+                    df_r       = df_new.copy()
                     df_r['prediction'] = preds
                     if problem_type != 'regression' and hasattr(engine.best_model,'predict_proba'):
                         try:
