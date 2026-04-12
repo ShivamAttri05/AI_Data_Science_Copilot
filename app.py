@@ -95,12 +95,6 @@ html, body, [class*="css"] {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
-/* ── GLOBAL ───────────────────────────────────────────────────────────────── */
-html, body, [class*="css"] { 
-    font-family: var(--f-ui) !important; 
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
 .block-container { padding-top:4.5rem !important; padding-bottom:4rem !important; max-width:1400px; }
 .stApp > header { background: transparent !important; }
 
@@ -408,10 +402,10 @@ def _fig(f):
 # ── Session state ─────────────────────────────────────────────────────────────
 
 for _k, _v in {
-    'df':None,'data_loaded':False,'quality_report':None,'eda_results':None,
-    'ai_insights':None,'automl_results':None,'target_col':None,'problem_type':None,
-    'best_model':None,'analyzer':None,'predictions':None,'prediction_engine':None,
-    'prediction_model_path':None,'feature_names':None,'last_prediction':None,
+    'df':None, 'raw_df':None, 'data_loaded':False, 'quality_report':None, 'data_cleaned':False,
+    'eda_results':None, 'ai_insights':None, 'automl_results':None, 'target_col':None, 'problem_type':None,
+    'best_model':None, 'analyzer':None, 'predictions':None, 'prediction_engine':None,
+    'prediction_model_path':None, 'feature_names':None, 'last_prediction':None,
 }.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
@@ -423,6 +417,7 @@ def _pipeline_progress():
     return [
         ("Dataset upload",     st.session_state.data_loaded),
         ("Data quality check", st.session_state.quality_report is not None),
+        ("Data cleaning",      st.session_state.data_cleaned),
         ("EDA analysis",       st.session_state.eda_results    is not None),
         ("AI insights",        st.session_state.ai_insights    is not None),
         ("AutoML training",    st.session_state.automl_results is not None),
@@ -500,7 +495,7 @@ def render_sidebar():
 
         page = st.radio(
             "Go to",
-            ["🏠 Home","📁 Dataset Upload","🔍 Data Quality","📈 EDA Dashboard",
+            ["🏠 Home","📁 Dataset Upload","🔍 Data Quality", "🧹 Data Cleaning", "📈 EDA Dashboard",
              "🧠 AI Insights","🤖 AutoML Training","📊 Model Evaluation","🔮 Predictions","🚀 Deployment"],
             label_visibility="collapsed"
         )
@@ -580,6 +575,7 @@ def render_home():
     for i, (title, desc) in enumerate([
         ("📁 Dataset Upload",          "Load CSV / Excel or pick a built-in sample"),
         ("🔍 Data Quality Check",      "Detect missing values, duplicates & outliers"),
+        ("🧹 Data Cleaning",           "Drop features, impute missing values, and handle outliers"),
         ("📈 Exploratory Analysis",    "Distributions, correlations & categorical breakdowns"),
         ("🧠 AI Dataset Investigation","Gemini-powered insights & preprocessing guidance"),
         ("🤖 AutoML Training",         "Train & compare models with overfit diagnostics"),
@@ -598,7 +594,7 @@ def render_home():
         st.info("👈 Start by uploading your dataset in **Dataset Upload**.")
     else:
         done = sum(d for _, d in _pipeline_progress())
-        st.success(f"✅ {done}/5 pipeline steps completed — keep going!")
+        st.success(f"✅ {done}/6 pipeline steps completed — keep going!")
 
 
 # ── render_dataset_upload ─────────────────────────────────────────────────────
@@ -621,11 +617,11 @@ def render_dataset_upload():
     col1, col2, col3 = st.columns(3)
     sample_dataset = None
     with col1:
-        if st.button("🌸 Iris — classification", width='stretch'):   sample_dataset = 'iris'
+        if st.button("🌸 Iris — classification", use_container_width=True):   sample_dataset = 'iris'
     with col2:
-        if st.button("🍷 Wine — classification", width='stretch'):   sample_dataset = 'wine'
+        if st.button("🍷 Wine — classification", use_container_width=True):   sample_dataset = 'wine'
     with col3:
-        if st.button("🏠 California — regression", width='stretch'): sample_dataset = 'california'
+        if st.button("🏠 California — regression", use_container_width=True): sample_dataset = 'california'
 
     if uploaded_file is not None or sample_dataset:
         try:
@@ -665,7 +661,7 @@ def render_dataset_upload():
 
             t1, t2 = st.tabs(["Data preview","Column details"])
             with t1:
-                st.dataframe(df.head(10), width='stretch')
+                st.dataframe(df.head(10), use_container_width=True)
             with t2:
                 md = df.isnull().sum()
                 mp = (md / len(df) * 100).round(2)
@@ -673,7 +669,7 @@ def render_dataset_upload():
                                    'Unique':[df[c].nunique() for c in df.columns],
                                    'Missing':md.values,'Missing %':mp.values})
                 st.dataframe(ci.style.background_gradient(subset=['Missing %'],cmap='Reds',vmin=0,vmax=100),
-                             width='stretch', hide_index=True)
+                             use_container_width=True, hide_index=True)
 
             _section("Configure","Select target column")
 
@@ -712,7 +708,7 @@ def render_dataset_upload():
                                               title=f"Distribution — {target_col}",
                                               color_discrete_sequence=["#4f46e5"]))
                         f.update_layout(showlegend=False)
-                        st.plotly_chart(f, width='stretch')
+                        st.plotly_chart(f, use_container_width=True)
                     else:
                         vc = df[target_col].value_counts().reset_index()
                         vc.columns = [target_col, 'count']
@@ -720,7 +716,7 @@ def render_dataset_upload():
                                         title=f"Class distribution — {target_col}",
                                         color_discrete_sequence=["#4f46e5"]))
                         f.update_layout(showlegend=False)
-                        st.plotly_chart(f, width='stretch')
+                        st.plotly_chart(f, use_container_width=True)
             else:
                 st.session_state.target_col   = None
                 st.session_state.problem_type = None
@@ -743,7 +739,7 @@ def render_data_quality():
     df = st.session_state.df
     cb, ch = st.columns([1,3])
     with cb:
-        run_check = st.button("🔍 Run quality check", type="primary", width='stretch')
+        run_check = st.button("🔍 Run quality check", type="primary", use_container_width=True)
     with ch:
         st.caption("Checks for missing values, duplicates, outliers, and constant columns.")
 
@@ -786,8 +782,8 @@ def render_data_quality():
                             title='Missing values per column (%)',
                             color='Percentage', color_continuous_scale=['#e0e7ff','#4f46e5'], text_auto='.1f'))
             f.update_layout(coloraxis_showscale=False)
-            st.plotly_chart(f, width='stretch')
-            st.dataframe(mdf, width='stretch', hide_index=True)
+            st.plotly_chart(f, use_container_width=True)
+            st.dataframe(mdf, use_container_width=True, hide_index=True)
         else:
             st.success("✅ No missing values.")
 
@@ -808,8 +804,8 @@ def render_data_quality():
                             title='Outlier rate per column (%)',
                             color='Percentage', color_continuous_scale=['#fef3c7','#d97706'], text_auto='.1f'))
             f.update_layout(coloraxis_showscale=False)
-            st.plotly_chart(f, width='stretch')
-            st.dataframe(odf, width='stretch', hide_index=True)
+            st.plotly_chart(f, use_container_width=True)
+            st.dataframe(odf, use_container_width=True, hide_index=True)
         else:
             st.success("✅ No significant outliers.")
 
@@ -833,6 +829,155 @@ def render_data_quality():
         for rec in report['recommendations']: st.info(f"💡 {rec}")
 
 
+# ── render_data_cleaning ──────────────────────────────────────────────────────
+
+def render_data_cleaning():
+    """Render the advanced data cleaning page."""
+    _hero("🧹","Data Cleaning","Select features, impute missing values, and handle outliers automatically")
+
+    if not st.session_state.data_loaded:
+        st.warning("⚠️ Upload a dataset first.")
+        return
+
+    df = st.session_state.df
+    target_col = st.session_state.target_col
+
+    st.markdown("### 1. Feature Selection")
+    
+    importances = None
+    if target_col and target_col in df.columns:
+        with st.spinner("Calculating baseline feature importance to help you decide..."):
+            try:
+                # Create a robust, fast encoding for a quick Random Forest baseline
+                sample_df = df.sample(min(len(df), 5000), random_state=42).copy()
+                
+                # Fast label encoding for categorical columns
+                for c in sample_df.columns:
+                    if sample_df[c].dtype == 'object' or sample_df[c].dtype.name == 'category':
+                        sample_df[c] = sample_df[c].astype(str).astype('category').cat.codes
+                
+                # Quick median imputation for FI calculation only
+                sample_df = sample_df.fillna(sample_df.median())
+                
+                X_sample = sample_df.drop(columns=[target_col])
+                y_sample = sample_df[target_col]
+
+                if st.session_state.problem_type == 'regression':
+                    from sklearn.ensemble import RandomForestRegressor
+                    model = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
+                else:
+                    from sklearn.ensemble import RandomForestClassifier
+                    model = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1)
+
+                model.fit(X_sample, y_sample)
+                
+                importances = pd.DataFrame({
+                    'Feature': X_sample.columns,
+                    'Importance': model.feature_importances_
+                }).sort_values(by='Importance', ascending=False)
+                
+            except Exception as e:
+                st.warning(f"Could not calculate baseline importance: {e}")
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        cols_to_drop = st.multiselect(
+            "Select columns to DROP", 
+            options=[c for c in df.columns if c != target_col],
+            help="Drop ID columns, names, or features with near-zero importance."
+        )
+    with col2:
+        if importances is not None:
+            st.caption("Baseline Feature Importance (Quick RF)")
+            st.dataframe(importances, height=200, use_container_width=True, hide_index=True)
+        else:
+            st.info("Select a target column in 'Dataset Upload' to see feature importances.")
+
+    st.markdown("### 2. Auto-Cleaning Options")
+    c1, c2, c3 = st.columns(3)
+    with c1: 
+        handle_missing = st.checkbox("Impute Missing Values", value=True, help="Numeric: Median for skewed, Mean for normal. Categorical: Mode.")
+    with c2: 
+        handle_outliers = st.checkbox("Cap Outliers (Winsorize)", value=True, help="Caps numeric outliers using the robust 1.5x IQR rule without losing rows.")
+    with c3: 
+        drop_constants = st.checkbox("Drop Constant Columns", value=True, help="Automatically removes columns with zero variance.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("✨ Run Advanced Auto-Cleaning", type="primary", use_container_width=True):
+        with st.spinner("Applying robust data cleaning..."):
+            clean_df = df.copy()
+            report = []
+
+            # 0. Drop rows where Target is missing (Critical for ML)
+            if target_col and clean_df[target_col].isnull().any():
+                missing_target_rows = clean_df[target_col].isnull().sum()
+                clean_df.dropna(subset=[target_col], inplace=True)
+                report.append(f"Dropped {missing_target_rows} rows where Target '{target_col}' was missing.")
+
+            # 1. Drop Manual Columns
+            if cols_to_drop:
+                clean_df.drop(columns=cols_to_drop, inplace=True)
+                report.append(f"Dropped {len(cols_to_drop)} manually selected columns.")
+
+            # 2. Drop Constants
+            if drop_constants:
+                const_cols = [c for c in clean_df.columns if clean_df[c].nunique() <= 1 and c != target_col]
+                if const_cols:
+                    clean_df.drop(columns=const_cols, inplace=True)
+                    report.append(f"Dropped {len(const_cols)} constant columns with zero variance.")
+
+            # 3. Missing Values
+            if handle_missing:
+                num_missing = 0
+                for c in clean_df.columns:
+                    if clean_df[c].isnull().any() and c != target_col:
+                        num_missing += 1
+                        if pd.api.types.is_numeric_dtype(clean_df[c]):
+                            skew = clean_df[c].skew()
+                            # Use median if skewed, mean if normal
+                            val = clean_df[c].median() if abs(skew) > 1 else clean_df[c].mean()
+                            clean_df[c] = clean_df[c].fillna(val)
+                        else:
+                            # Categorical mode
+                            val = clean_df[c].mode()[0] if not clean_df[c].mode().empty else "Unknown"
+                            clean_df[c] = clean_df[c].fillna(val)
+                if num_missing > 0:
+                    report.append(f"Smart-imputed missing values in {num_missing} columns.")
+
+            # 4. Outliers
+            if handle_outliers:
+                num_outliers_capped = 0
+                num_cols = clean_df.select_dtypes(include=np.number).columns
+                for c in num_cols:
+                    if c == target_col: continue
+                    Q1 = clean_df[c].quantile(0.25)
+                    Q3 = clean_df[c].quantile(0.75)
+                    IQR = Q3 - Q1
+                    lower_bound = Q1 - 1.5 * IQR
+                    upper_bound = Q3 + 1.5 * IQR
+                    
+                    # Check if any values are outside bounds
+                    outliers = (clean_df[c] < lower_bound) | (clean_df[c] > upper_bound)
+                    if outliers.any():
+                        clean_df[c] = np.clip(clean_df[c], lower_bound, upper_bound)
+                        num_outliers_capped += 1
+                if num_outliers_capped > 0:
+                    report.append(f"Winsorized (capped) outliers in {num_outliers_capped} numeric columns using 1.5x IQR.")
+
+            # Save state
+            st.session_state.raw_df = df # Backup original
+            st.session_state.df = clean_df
+            st.session_state.data_cleaned = True
+            
+            st.success("✅ Data cleaning complete!")
+            for msg in report: 
+                st.info(f"👉 {msg}")
+            
+            st.markdown("##### Cleaned Data Preview")
+            st.dataframe(clean_df.head(10), use_container_width=True)
+
+
 # ── render_eda ────────────────────────────────────────────────────────────────
 
 def render_eda():
@@ -846,7 +991,7 @@ def render_eda():
     df = st.session_state.df
     cb, ch = st.columns([1,3])
     with cb:
-        run_eda = st.button("📊 Run EDA", type="primary", width='stretch')
+        run_eda = st.button("📊 Run EDA", type="primary", use_container_width=True)
     with ch:
         st.caption("Generates summary statistics, correlations, and distribution plots.")
 
@@ -879,16 +1024,16 @@ def render_eda():
                           title='Column type breakdown',
                           color_discrete_sequence=['#4f46e5','#7c3aed','#0284c7']))
         f.update_traces(textfont_size=12)
-        st.plotly_chart(f, width='stretch')
+        st.plotly_chart(f, use_container_width=True)
 
     with tabs[1]:
         stats = results['summary_statistics']
         if 'numeric' in stats:
             st.markdown("**Numeric summary**")
-            st.dataframe(stats['numeric'].style.format(precision=3), width='stretch')
+            st.dataframe(stats['numeric'].style.format(precision=3), use_container_width=True)
         if 'categorical' in stats:
             st.markdown("**Categorical summary**")
-            st.dataframe(stats['categorical'], width='stretch')
+            st.dataframe(stats['categorical'], use_container_width=True)
 
     with tabs[2]:
         corr = results['correlation_analysis']
@@ -896,11 +1041,11 @@ def render_eda():
             hf = engine.generate_correlation_heatmap(use_plotly=True)
             if hf:
                 hf.update_layout(**_PL)
-                st.plotly_chart(hf, width='stretch')
+                st.plotly_chart(hf, use_container_width=True)
         if corr.get('high_correlation_pairs'):
             st.markdown("**Highly correlated pairs**")
             st.dataframe(pd.DataFrame(corr['high_correlation_pairs']),
-                         width='stretch', hide_index=True)
+                         use_container_width=True, hide_index=True)
         else:
             st.info("No high-correlation pairs above threshold.")
 
@@ -913,7 +1058,7 @@ def render_eda():
             fs = engine.generate_distribution_plots([sc], use_plotly=True)
             if fs:
                 fs[0][1].update_layout(**_PL)
-                st.plotly_chart(fs[0][1], width='stretch')
+                st.plotly_chart(fs[0][1], use_container_width=True)
             ds = results['distributions']['distribution_stats'].get(sc, {})
             if ds:
                 d1,d2,d3,d4 = st.columns(4)
@@ -934,7 +1079,7 @@ def render_eda():
                               color=vc.values, color_continuous_scale=['#e0e7ff','#4f46e5'],
                               text_auto=True))
             f2.update_layout(coloraxis_showscale=False, yaxis=dict(autorange='reversed'))
-            st.plotly_chart(f2, width='stretch')
+            st.plotly_chart(f2, use_container_width=True)
 
 
 # ── render_ai_insights ────────────────────────────────────────────────────────
@@ -955,7 +1100,7 @@ def render_ai_insights():
 
     cb, ch = st.columns([1,3])
     with cb:
-        run_ai = st.button("🧠 Generate insights", type="primary", width='stretch')
+        run_ai = st.button("🧠 Generate insights", type="primary", use_container_width=True)
     with ch:
         st.caption("Surfaces patterns, preprocessing advice, and model recommendations.")
 
@@ -1008,10 +1153,10 @@ def render_ai_insights():
 
     if ins.get('important_features'):
         st.markdown("#### Important features")
-        st.dataframe(pd.DataFrame(ins['important_features']), width='stretch', hide_index=True)
+        st.dataframe(pd.DataFrame(ins['important_features']), use_container_width=True, hide_index=True)
     if ins.get('model_recommendations'):
         st.markdown("#### Recommended models")
-        st.dataframe(pd.DataFrame(ins['model_recommendations']), width='stretch', hide_index=True)
+        st.dataframe(pd.DataFrame(ins['model_recommendations']), use_container_width=True, hide_index=True)
 
 
 # ── render_automl ─────────────────────────────────────────────────────────────
@@ -1083,7 +1228,7 @@ def render_automl():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("🚀 Start training", type="primary", width='stretch'):
+    if st.button("🚀 Start training", type="primary", use_container_width=True):
         if not sel: st.error("Select at least one model."); return
         with st.spinner(f"Training {len(sel)} model(s)…"):
             try:
@@ -1133,7 +1278,7 @@ def render_automl():
     with st.expander("Full tradeoff table", expanded=True):
         tdf = pd.DataFrame(reasoning['tradeoff_analysis'])
         st.dataframe(tdf[['model','cv_mean','test_score','overfit_status','interpretability','tradeoff_summary']],
-                     width='stretch', hide_index=True)
+                     use_container_width=True, hide_index=True)
 
     mk  = 'accuracy' if is_clf else 'r2'
     f   = _fig(px.bar(results['comparison'], x='model', y=mk,
@@ -1142,7 +1287,7 @@ def render_automl():
                       title=f"Performance ({mk.upper()}) · coloured by overfit risk",
                       text_auto='.3f'))
     f.update_layout(legend_title_text='Overfit risk')
-    st.plotly_chart(f, width='stretch')
+    st.plotly_chart(f, use_container_width=True)
 
     if results.get('feature_importance') is not None:
         _section("Explainability","Feature importance (top 10)")
@@ -1153,7 +1298,7 @@ def render_automl():
                          text_auto='.3f'))
         ff.update_layout(coloraxis_showscale=False,
                          yaxis=dict(autorange='reversed', categoryorder='total ascending'))
-        st.plotly_chart(ff, width='stretch')
+        st.plotly_chart(ff, use_container_width=True)
 
 
 # ── render_model_evaluation ───────────────────────────────────────────────────
@@ -1231,7 +1376,7 @@ def render_model_evaluation():
                       annotation_text=f"Mean {mu:.4f}", annotation_font_color='#dc2626')
         fig.update_layout(**_PL, xaxis_title='CV fold', yaxis_title='Score',
                           title='Score stability across folds')
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 
     with tabs[3]:
         st.json({"metrics":mr['metrics'],"train_metrics":mr['train_metrics'],
@@ -1316,7 +1461,7 @@ def render_predictions():
                         else:
                             input_data[fn] = st.number_input(fn, value=0.0, step=0.1, format="%.4f", key=f"s_{idx}")
 
-            if st.form_submit_button("🔮 Predict", type="primary", width='stretch'):
+            if st.form_submit_button("🔮 Predict", type="primary", use_container_width=True):
                 try:
                     X_new = pd.DataFrame([input_data])[feature_names]
                     pred  = engine.predict(X_new)[0]
@@ -1331,7 +1476,7 @@ def render_predictions():
                                 if len(proba)<=10:
                                     f = _fig(px.bar(pd.DataFrame({'Class':range(len(proba)),'Probability':proba}),
                                                     x='Class',y='Probability',color_discrete_sequence=['#4f46e5']))
-                                    st.plotly_chart(f, width='stretch')
+                                    st.plotly_chart(f, use_container_width=True)
                         except Exception as e: st.warning(f"Could not compute probabilities: {e}")
                     st.success("✅ Done!")
                     st.session_state.last_prediction = {'input':input_data,'prediction':pred}
@@ -1361,15 +1506,15 @@ def render_predictions():
                             df_r['confidence'] = np.max(probs,axis=1).round(4)
                         except Exception: pass
                     st.success(f"✅ {len(preds):,} predictions generated.")
-                    st.dataframe(df_r, width='stretch', hide_index=True)
+                    st.dataframe(df_r, use_container_width=True, hide_index=True)
                     st.download_button("📥 Download predictions (CSV)",
                                        df_r.to_csv(index=False).encode('utf-8'),
-                                       "predictions.csv","text/csv",width='stretch')
+                                       "predictions.csv","text/csv",use_container_width=True)
                     if problem_type=='regression' and len(preds)>1:
                         f = _fig(px.histogram(preds, nbins=30, title='Prediction distribution',
                                               color_discrete_sequence=['#4f46e5']))
                         f.update_layout(showlegend=False)
-                        st.plotly_chart(f, width='stretch')
+                        st.plotly_chart(f, use_container_width=True)
             except Exception as e: st.error(f"Batch error: {e}")
 
     with t3:
@@ -1413,7 +1558,7 @@ def render_deployment():
         st.caption("Exports the full sklearn pipeline as a `.pkl` file.")
         model_name = st.text_input("Model name","trained_model",key="save_name")
 
-        if st.button("💾 Export model", type="primary", width='stretch'):
+        if st.button("💾 Export model", type="primary", use_container_width=True):
             with st.spinner("Saving…"):
                 try:
                     deployer = ModelDeployer()
@@ -1431,7 +1576,7 @@ def render_deployment():
                     with open(fp,'rb') as fh:
                         st.download_button("📥 Download model file", fh.read(),
                                            file_name=os.path.basename(fp),
-                                           mime='application/octet-stream',width='stretch')
+                                           mime='application/octet-stream',use_container_width=True)
                 except Exception as e: st.error(f"Save failed: {e}")
 
     with c2:
@@ -1439,7 +1584,7 @@ def render_deployment():
         st.caption("Generates a ready-to-run REST API with Swagger docs.")
         api_port = st.number_input("Port",8000,9000,8000)
 
-        if st.button("🌐 Generate API", type="primary", width='stretch'):
+        if st.button("🌐 Generate API", type="primary", use_container_width=True):
             with st.spinner("Generating API…"):
                 try:
                     deployer = ModelDeployer()
@@ -1465,15 +1610,16 @@ def main():
     render_header()
     page = render_sidebar()
 
-    if   page == "🏠 Home":             render_home()
-    elif page == "📁 Dataset Upload":   render_dataset_upload()
-    elif page == "🔍 Data Quality":     render_data_quality()
-    elif page == "📈 EDA Dashboard":    render_eda()
-    elif page == "🧠 AI Insights":      render_ai_insights()
-    elif page == "🤖 AutoML Training":  render_automl()
-    elif page == "📊 Model Evaluation": render_model_evaluation()
-    elif page == "🔮 Predictions":      render_predictions()
-    elif page == "🚀 Deployment":       render_deployment()
+    if   page == "🏠 Home":              render_home()
+    elif page == "📁 Dataset Upload":    render_dataset_upload()
+    elif page == "🔍 Data Quality":      render_data_quality()
+    elif page == "🧹 Data Cleaning":     render_data_cleaning()
+    elif page == "📈 EDA Dashboard":     render_eda()
+    elif page == "🧠 AI Insights":       render_ai_insights()
+    elif page == "🤖 AutoML Training":   render_automl()
+    elif page == "📊 Model Evaluation":  render_model_evaluation()
+    elif page == "🔮 Predictions":       render_predictions()
+    elif page == "🚀 Deployment":        render_deployment()
 
 
 if __name__ == "__main__":
