@@ -26,11 +26,14 @@ from sklearn.ensemble import (
 )
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import (
+    ElasticNet,
     Lasso,
     LinearRegression,
     LogisticRegression,
     Ridge,
 )
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -60,19 +63,26 @@ from sklearn.preprocessing import (
     RobustScaler,
     StandardScaler,
 )
-from sklearn.svm import SVC
+from sklearn.svm import SVC, SVR
 
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ── Optional XGBoost ───────────────────────────────────────────────────────────
+# ── Optional Boosting Libraries ────────────────────────────────────────────────
 try:
     from xgboost import XGBClassifier, XGBRegressor
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
     logger.warning("XGBoost not available — XGBoost models will be skipped.")
+
+try:
+    from lightgbm import LGBMClassifier, LGBMRegressor
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    LIGHTGBM_AVAILABLE = False
+    logger.warning("LightGBM not available — LightGBM models will be skipped.")
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 _CLASSIFICATION_THRESHOLD = 15   # nunique ≤ this → classification candidate
@@ -103,8 +113,11 @@ class AutoMLEngine:
 
     # ── Base model definitions ─────────────────────────────────────────────────
     CLASSIFICATION_MODELS: Dict[str, Any] = {
-        "logistic_regression": LogisticRegression(max_iter=1000, random_state=42),
-        "random_forest":       RandomForestClassifier(n_estimators=100, random_state=42),
+        "logistic_regression": LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced"),
+        "naive_bayes":         GaussianNB(),
+        "knn":                 KNeighborsClassifier(n_neighbors=5, weights='distance'),
+        "svm":                 SVC(probability=True, random_state=42, class_weight="balanced"),
+        "random_forest":       RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced"),
         "gradient_boosting":   GradientBoostingClassifier(n_estimators=100, random_state=42),
     }
 
@@ -112,6 +125,9 @@ class AutoMLEngine:
         "linear_regression": LinearRegression(),
         "ridge":             Ridge(random_state=42),
         "lasso":             Lasso(random_state=42),
+        "elasticnet":        ElasticNet(random_state=42),
+        "knn":               KNeighborsRegressor(n_neighbors=5, weights='distance'),
+        "svm":               SVR(),
         "random_forest":     RandomForestRegressor(n_estimators=100, random_state=42),
         "gradient_boosting": GradientBoostingRegressor(n_estimators=100, random_state=42),
     }
@@ -119,11 +135,32 @@ class AutoMLEngine:
     # ── Static model knowledge base for the reasoning layer ───────────────────
     _MODEL_PROFILES: Dict[str, Dict[str, Any]] = {
         "logistic_regression": {
-            "strengths":     ["Fast to train", "Highly interpretable", "Works well when classes are linearly separable", "Low variance — rarely overfits"],
+            "strengths":     ["Fast to train", "Highly interpretable", "Works well when classes are linearly separable", "Low variance"],
             "weaknesses":    ["Cannot capture non-linear relationships", "Sensitive to feature scale", "Struggles with high-cardinality categoricals"],
-            "fails_when":    ["Features interact non-linearly", "Classes are imbalanced without reweighting", "Many irrelevant features present"],
+            "fails_when":    ["Features interact non-linearly", "Many irrelevant features present"],
             "bias_level":    "high",
             "variance_level": "low",
+        },
+        "naive_bayes": {
+            "strengths":     ["Extremely fast", "Works well with high dimensions", "Provides good baseline probabilities"],
+            "weaknesses":    ["Assumes features are completely independent", "Poor probability calibrator"],
+            "fails_when":    ["Features are highly correlated", "Complex non-linear interactions exist"],
+            "bias_level":    "high",
+            "variance_level": "low",
+        },
+        "knn": {
+            "strengths":     ["Makes no assumptions about data distribution", "Captures local structures well"],
+            "weaknesses":    ["Slow inference time", "Very sensitive to irrelevant features and scaling", "Curse of dimensionality"],
+            "fails_when":    ["High-dimensional datasets (>50 features)", "Imbalanced data in local neighborhoods"],
+            "bias_level":    "low",
+            "variance_level": "high",
+        },
+        "svm": {
+            "strengths":     ["Effective in high dimensional spaces", "Versatile due to kernel trick", "Robust against outliers"],
+            "weaknesses":    ["Does not scale well to large datasets", "Requires careful scaling and hyperparameter tuning"],
+            "fails_when":    ["Dataset is very large (>100k rows)", "High noise in the target variable"],
+            "bias_level":    "low",
+            "variance_level": "medium",
         },
         "ridge": {
             "strengths":     ["Handles multicollinearity well", "Low variance via L2 regularisation", "Fast and interpretable"],
@@ -136,6 +173,13 @@ class AutoMLEngine:
             "strengths":     ["Built-in feature selection via L1 sparsity", "Good when few features are truly predictive"],
             "weaknesses":    ["Can under-select correlated features", "Needs careful alpha tuning"],
             "fails_when":    ["All features are informative", "Features are highly correlated"],
+            "bias_level":    "medium",
+            "variance_level": "low",
+        },
+        "elasticnet": {
+            "strengths":     ["Combines feature selection of Lasso with stability of Ridge", "Handles correlated features well"],
+            "weaknesses":    ["More hyperparameters to tune (alpha, l1_ratio)", "Assumes linear relationship"],
+            "fails_when":    ["True relationship is highly non-linear"],
             "bias_level":    "medium",
             "variance_level": "low",
         },
@@ -154,7 +198,7 @@ class AutoMLEngine:
             "variance_level": "medium",
         },
         "gradient_boosting": {
-            "strengths":     ["Often best accuracy on tabular data", "Handles missing values natively (XGBoost)", "Captures complex interactions"],
+            "strengths":     ["Often best accuracy on tabular data", "Captures complex interactions"],
             "weaknesses":    ["Slow to train", "Many hyperparameters to tune", "Prone to overfitting on noisy data"],
             "fails_when":    ["Very small datasets", "High noise-to-signal ratio", "Real-time training required"],
             "bias_level":    "low",
@@ -164,6 +208,13 @@ class AutoMLEngine:
             "strengths":     ["State-of-the-art on most tabular benchmarks", "Handles missing values natively", "Regularised boosting reduces overfitting vs plain GBM"],
             "weaknesses":    ["Many hyperparameters", "Black-box predictions"],
             "fails_when":    ["Very small datasets", "High label noise", "Extrapolation beyond training distribution"],
+            "bias_level":    "low",
+            "variance_level": "medium",
+        },
+        "lightgbm": {
+            "strengths":     ["Extremely fast training speed", "Highly memory efficient", "State-of-the-art accuracy"],
+            "weaknesses":    ["Prone to overfitting on small datasets (<10,000 rows)"],
+            "fails_when":    ["Datasets are too small, leading to rapid overfitting at leaf nodes"],
             "bias_level":    "low",
             "variance_level": "medium",
         },
@@ -202,10 +253,19 @@ class AutoMLEngine:
         if XGBOOST_AVAILABLE:
             self.CLASSIFICATION_MODELS["xgboost"] = XGBClassifier(
                 n_estimators=100, random_state=random_state,
-                use_label_encoder=False, eval_metric="logloss",
+                eval_metric="logloss",
             )
             self.REGRESSION_MODELS["xgboost"] = XGBRegressor(
                 n_estimators=100, random_state=random_state,
+            )
+            
+        # ── Add LightGBM if installed ──────────────────────────────────────────
+        if LIGHTGBM_AVAILABLE:
+            self.CLASSIFICATION_MODELS["lightgbm"] = LGBMClassifier(
+                n_estimators=100, random_state=random_state, class_weight="balanced"
+            )
+            self.REGRESSION_MODELS["lightgbm"] = LGBMRegressor(
+                n_estimators=100, random_state=random_state
             )
 
     # ══════════════════════════════════════════════════════════════════════════

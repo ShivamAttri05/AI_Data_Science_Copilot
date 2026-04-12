@@ -37,11 +37,9 @@ st.set_page_config(
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  DESIGN SYSTEM
-#  Palette  : indigo primary · slate neutrals · semantic greens/ambers/reds
-#  Typeface : DM Sans (UI body) + DM Mono (code)
-#  Aesthetic: Refined data-tool — dark sidebar, crisp white canvas,
-#             strong type hierarchy, purposeful accent colour.
+#  DESIGN SYSTEM: "SaaS Premium"
+#  Palette  : Deep Indigo · Slate Neutrals · Semantic Accents
+#  Features : Glassmorphism, Soft Shadows, Gradient Highlights, Micro-animations
 # ══════════════════════════════════════════════════════════════════════════════
 
 st.markdown("""
@@ -54,15 +52,16 @@ st.markdown("""
     --p-lt:    #eef2ff;
     --p-dk:    #3730a3;
     --p-mid:   #6366f1;
+    --p-glow:  rgba(99, 102, 241, 0.4);
 
-    --ok:      #059669;
-    --ok-lt:   #ecfdf5;
-    --warn:    #d97706;
-    --warn-lt: #fffbeb;
-    --err:     #dc2626;
-    --err-lt:  #fef2f2;
-    --inf:     #0284c7;
-    --inf-lt:  #f0f9ff;
+    --ok:      #10b981;
+    --ok-lt:   #d1fae5;
+    --warn:    #f59e0b;
+    --warn-lt: #fef3c7;
+    --err:     #ef4444;
+    --err-lt:  #fee2e2;
+    --inf:     #0ea5e9;
+    --inf-lt:  #e0f2fe;
 
     --s50:  #f8fafc;
     --s100: #f1f5f9;
@@ -75,237 +74,314 @@ st.markdown("""
     --s800: #1e293b;
     --s900: #0f172a;
 
-    --r-sm: 6px;
-    --r-md: 10px;
-    --r-lg: 14px;
-    --r-xl: 20px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 24px;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    --shadow-float: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
     --f-ui:   'DM Sans', sans-serif;
     --f-mono: 'DM Mono', monospace;
-    --t: 0.18s ease;
+    --t: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── GLOBAL ───────────────────────────────────────────────────────────────── */
-html, body, [class*="css"] { font-family: var(--f-ui) !important; }
-.block-container { padding-top:1.25rem !important; padding-bottom:4rem !important; max-width:1400px; }
-.stApp > header { display:none; }
+html, body, [class*="css"] { 
+    font-family: var(--f-ui) !important; 
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+/* ── GLOBAL ───────────────────────────────────────────────────────────────── */
+html, body, [class*="css"] { 
+    font-family: var(--f-ui) !important; 
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.block-container { padding-top:4.5rem !important; padding-bottom:4rem !important; max-width:1400px; }
+.stApp > header { background: transparent !important; }
+
+/* ── ANIMATIONS ───────────────────────────────────────────────────────────── */
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 /* ── SIDEBAR ──────────────────────────────────────────────────────────────── */
 [data-testid="stSidebar"] {
-    background: var(--s900) !important;
-    border-right: 1px solid rgba(255,255,255,0.06) !important;
+    background: linear-gradient(180deg, var(--s900) 0%, #080c17 100%) !important;
+    border-right: 1px solid rgba(255,255,255,0.08) !important;
 }
 [data-testid="stSidebar"] * { color: var(--s300) !important; font-family: var(--f-ui) !important; }
 [data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3 {
-    color:#fff !important; font-size:0.68rem !important; font-weight:700 !important;
-    letter-spacing:0.13em !important; text-transform:uppercase !important;
-    margin:1.25rem 0 0.4rem !important;
+    color:#fff !important; font-size:0.7rem !important; font-weight:700 !important;
+    letter-spacing:0.15em !important; text-transform:uppercase !important;
+    margin:1.5rem 0 0.5rem !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 [data-testid="stSidebar"] [data-testid="stRadio"] label {
-    font-size:0.875rem !important; font-weight:400 !important; color:var(--s400) !important;
-    padding:0.42rem 0.7rem !important; border-radius:var(--r-sm) !important;
-    cursor:pointer; transition:all var(--t); display:flex; align-items:center; gap:0.5rem;
+    font-size:0.9rem !important; font-weight:500 !important; color:var(--s400) !important;
+    padding:0.6rem 0.8rem !important; border-radius:var(--r-sm) !important;
+    cursor:pointer; transition:all var(--t); display:flex; align-items:center; gap:0.6rem;
+    margin-bottom: 2px !important;
 }
 [data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-    background:rgba(255,255,255,0.06) !important; color:#fff !important;
+    background:rgba(255,255,255,0.08) !important; color:#fff !important;
+    transform: translateX(4px);
 }
 [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
-    background:rgba(99,102,241,0.18) !important; color:#a5b4fc !important; font-weight:500 !important;
+    background: linear-gradient(90deg, rgba(99,102,241,0.2) 0%, transparent 100%) !important; 
+    color:#fff !important; font-weight:600 !important;
+    border-left: 3px solid var(--p-mid) !important;
+    box-shadow: inset 20px 0 20px -20px var(--p-glow);
 }
-[data-testid="stSidebar"] hr { border-color:rgba(255,255,255,0.07) !important; margin:0.9rem 0 !important; }
-[data-testid="stSidebar"] [data-testid="stCaption"] { font-size:0.73rem !important; color:var(--s500) !important; }
+[data-testid="stSidebar"] hr { border-color:rgba(255,255,255,0.07) !important; margin:1.2rem 0 !important; }
 
 /* ── TYPOGRAPHY CLASSES ───────────────────────────────────────────────────── */
-.wordmark { font-size:1.45rem; font-weight:700; color:var(--s900); letter-spacing:-0.03em; line-height:1; }
-.tagline  { font-size:0.82rem; color:var(--s500); margin-top:3px; }
+.wordmark { font-size:1.6rem; font-weight:800; color:var(--s900); letter-spacing:-0.04em; line-height:1; }
+.tagline  { font-size:0.85rem; color:var(--s500); margin-top:5px; font-weight: 500;}
 
-.sec-over  { font-size:0.67rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--p); display:block; margin-bottom:2px; }
-.sec-title { font-size:1.3rem; font-weight:700; color:var(--s900); letter-spacing:-0.02em; line-height:1.2; }
-.sec-rule  { width:28px; height:3px; background:var(--p); border-radius:2px; margin:6px 0 14px; }
-.sec-body  { font-size:0.875rem; color:var(--s500); line-height:1.55; margin-bottom:1.4rem; }
+.sec-over  { font-size:0.7rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--p); display:block; margin-bottom:4px; }
+.sec-title { font-size:1.4rem; font-weight:800; color:var(--s900); letter-spacing:-0.03em; line-height:1.2; }
+.sec-rule  { width:32px; height:4px; background: linear-gradient(90deg, var(--p), var(--p-mid)); border-radius:2px; margin:8px 0 16px; }
+.sec-body  { font-size:0.95rem; color:var(--s600); line-height:1.6; margin-bottom:1.5rem; }
 
 /* ── PAGE HERO BAND ───────────────────────────────────────────────────────── */
 .hero {
-    background: var(--s900);
+    background: linear-gradient(135deg, var(--s900) 0%, var(--s800) 100%);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow-lg);
     border-radius: var(--r-xl);
-    padding: 1.4rem 1.75rem;
-    margin-bottom: 1.75rem;
+    padding: 1.75rem 2rem;
+    margin-bottom: 2rem;
     display: flex;
     align-items: center;
-    gap: 1.1rem;
+    gap: 1.25rem;
+    position: relative;
+    overflow: hidden;
 }
-.hero-icon  { font-size:1.3rem; flex-shrink:0; }
-.hero-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.14em; color:#6366f1; margin-bottom:2px; }
-.hero-title { font-size:1.05rem; font-weight:700; color:#fff; letter-spacing:-0.02em; }
-.hero-sub   { font-size:0.78rem; color:var(--s400); margin-top:2px; }
+.hero::after {
+    content: ''; position: absolute; top: -50%; right: -10%;
+    width: 300px; height: 300px; background: radial-gradient(circle, var(--p-glow) 0%, transparent 70%);
+    opacity: 0.3; filter: blur(40px);
+}
+.hero-icon  { font-size:1.8rem; flex-shrink:0; background: rgba(255,255,255,0.1); padding: 12px; border-radius: var(--r-lg); backdrop-filter: blur(10px); }
+.hero-label { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.15em; color:var(--p-mid); margin-bottom:4px; }
+.hero-title { font-size:1.25rem; font-weight:800; color:#fff; letter-spacing:-0.02em; }
+.hero-sub   { font-size:0.85rem; color:var(--s300); margin-top:4px; font-weight: 400;}
 
 /* ── STAT CHIP ────────────────────────────────────────────────────────────── */
 .chip {
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--s100); border:1px solid var(--s200); border-radius:999px;
-    padding:3px 11px; font-size:0.78rem; font-weight:500; color:var(--s700);
+    display:inline-flex; align-items:center; gap:8px;
+    background: #fff; border:1px solid var(--s200); border-radius:999px;
+    padding:5px 14px; font-size:0.85rem; font-weight:600; color:var(--s700);
+    box-shadow: var(--shadow-sm);
 }
-.chip-dot { width:6px; height:6px; border-radius:50%; background:var(--ok); flex-shrink:0; }
+.chip-dot { 
+    width:8px; height:8px; border-radius:50%; background:var(--ok); flex-shrink:0; 
+    animation: pulseGlow 2s infinite;
+}
 
 /* ── BADGES ───────────────────────────────────────────────────────────────── */
-.bdg { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-size:0.71rem; font-weight:600; letter-spacing:0.02em; border:1px solid transparent; }
-.bdg-i { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+.bdg { display:inline-flex; align-items:center; padding:4px 12px; border-radius:999px; font-size:0.75rem; font-weight:700; letter-spacing:0.03em; border:1px solid transparent; text-transform: uppercase; }
+.bdg-i { background:var(--p-lt); color:var(--p-dk); border-color:#c7d2fe; }
 .bdg-v { background:#f5f3ff; color:#4c1d95; border-color:#ddd6fe; }
-.bdg-g { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+.bdg-g { background:var(--ok-lt); color:#065f46; border-color:#a7f3d0; }
 
 /* ── FEATURE CARDS ────────────────────────────────────────────────────────── */
 .feat {
     background:#fff; border:1px solid var(--s200); border-radius:var(--r-lg);
-    padding:1.2rem 1rem 1rem; transition:border-color var(--t), transform var(--t);
+    padding:1.5rem; transition:all var(--t);
+    box-shadow: var(--shadow-sm);
+    height: 100%;
 }
-.feat:hover { border-color:var(--p-mid); transform:translateY(-2px); }
-.feat-ico   { width:38px; height:38px; border-radius:var(--r-md); background:var(--p-lt); display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-bottom:0.7rem; }
-.feat-name  { font-size:0.875rem; font-weight:600; color:var(--s800); margin-bottom:2px; }
-.feat-desc  { font-size:0.77rem; color:var(--s500); line-height:1.4; }
+.feat:hover { 
+    border-color:var(--p-mid); 
+    transform:translateY(-4px); 
+    box-shadow: var(--shadow-lg);
+}
+.feat-ico   { width:44px; height:44px; border-radius:var(--r-md); background:var(--p-lt); display:flex; align-items:center; justify-content:center; font-size:1.25rem; margin-bottom:1rem; color: var(--p); }
+.feat-name  { font-size:1rem; font-weight:700; color:var(--s800); margin-bottom:6px; letter-spacing: -0.01em;}
+.feat-desc  { font-size:0.85rem; color:var(--s500); line-height:1.5; }
 
 /* ── WORKFLOW STEPS ───────────────────────────────────────────────────────── */
 .step {
-    display:flex; align-items:flex-start; gap:0.85rem;
-    padding:0.75rem 1rem; border-radius:var(--r-md); margin-bottom:0.38rem;
-    border:1px solid var(--s100); background:#fff; transition:border-color var(--t);
+    display:flex; align-items:flex-start; gap:1rem;
+    padding:1rem 1.25rem; border-radius:var(--r-md); margin-bottom:0.5rem;
+    border:1px solid var(--s200); background:#fff; transition:all var(--t);
 }
-.step:hover { border-color:var(--s300); }
-.step-num   { min-width:25px; height:25px; border-radius:50%; background:var(--p); color:#fff; font-size:0.68rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
-.step-t     { font-weight:600; font-size:0.875rem; color:var(--s800); }
-.step-d     { font-size:0.77rem; color:var(--s500); margin-top:1px; line-height:1.35; }
+.step:hover { border-color:var(--p-mid); background: var(--p-lt); transform: translateX(4px); }
+.step-num   { min-width:28px; height:28px; border-radius:50%; background: linear-gradient(135deg, var(--p), var(--p-dk)); color:#fff; font-size:0.8rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; box-shadow: 0 2px 4px var(--p-glow);}
+.step-t     { font-weight:700; font-size:0.95rem; color:var(--s900); }
+.step-d     { font-size:0.85rem; color:var(--s500); margin-top:3px; line-height:1.4; }
 
 /* ── SIDEBAR PROGRESS ─────────────────────────────────────────────────────── */
-.pb-track { height:3px; background:rgba(255,255,255,0.08); border-radius:2px; margin:5px 0 12px; overflow:hidden; }
-.pb-fill  { height:100%; background:linear-gradient(90deg,#6366f1,#8b5cf6); border-radius:2px; transition:width 0.5s ease; }
-.pi { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:0.79rem; }
+.pb-track { height:4px; background:rgba(255,255,255,0.1); border-radius:2px; margin:8px 0 16px; overflow:hidden; }
+.pb-fill  { height:100%; background:linear-gradient(90deg,#8b5cf6, #3b82f6); border-radius:2px; transition:width 0.8s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);}
+.pi { display:flex; align-items:center; gap:10px; padding:4px 0; font-size:0.85rem; font-weight: 500;}
 .pi-done { color:#6ee7b7 !important; }
-.pi-todo { color:var(--s600) !important; }
-.pi-c    { width:15px; height:15px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.58rem; flex-shrink:0; }
-.pi-c-y  { background:#059669; color:#fff; }
-.pi-c-n  { background:var(--s700); }
+.pi-todo { color:var(--s500) !important; }
+.pi-c    { width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.65rem; flex-shrink:0; font-weight: bold;}
+.pi-c-y  { background:#10b981; color:#fff; box-shadow: 0 0 8px rgba(16,185,129,0.4);}
+.pi-c-n  { background:var(--s700); color: var(--s400); }
 
 /* ── WINNER BANNER ────────────────────────────────────────────────────────── */
 .win {
-    background:var(--s900); border:1px solid rgba(99,102,241,0.28);
-    border-radius:var(--r-lg); padding:1.25rem 1.5rem;
-    display:flex; align-items:center; gap:1rem; margin-bottom:1.2rem;
+    background: linear-gradient(135deg, var(--s900) 0%, #1e1b4b 100%); 
+    border:1px solid rgba(99,102,241,0.3);
+    border-radius:var(--r-xl); padding:1.5rem 2rem;
+    display:flex; align-items:center; gap:1.25rem; margin-bottom:1.5rem;
+    box-shadow: var(--shadow-lg), inset 0 0 20px rgba(99,102,241,0.1);
 }
-.win-trophy { font-size:1.7rem; flex-shrink:0; }
-.win-lbl  { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.13em; color:#6366f1; margin-bottom:2px; }
-.win-name { font-size:1.05rem; font-weight:700; color:#fff; letter-spacing:-0.02em; }
-.win-sub  { font-size:0.77rem; color:var(--s400); margin-top:2px; }
+.win-trophy { font-size:2.2rem; flex-shrink:0; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));}
+.win-lbl  { font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.15em; color:var(--p-mid); margin-bottom:4px; }
+.win-name { font-size:1.4rem; font-weight:800; color:#fff; letter-spacing:-0.02em; }
+.win-sub  { font-size:0.85rem; color:var(--s400); margin-top:4px; }
 
 /* ── CONFIDENCE ───────────────────────────────────────────────────────────── */
-.conf-wrap  { text-align:right; }
-.conf-lbl   { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.11em; color:var(--s400); }
-.conf-val   { font-size:1.55rem; font-weight:700; letter-spacing:-0.03em; line-height:1; }
-.conf-note  { font-size:0.71rem; color:var(--s400); margin-top:2px; }
-.c-hi { color:#10b981; }
-.c-md { color:#f59e0b; }
-.c-lo { color:#f87171; }
+.conf-wrap  { text-align:right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
+.conf-lbl   { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.12em; color:var(--s400); }
+.conf-val   { font-size:2rem; font-weight:800; letter-spacing:-0.03em; line-height:1.1; margin-top: 4px;}
+.conf-note  { font-size:0.75rem; color:var(--s400); margin-top:4px; font-style: italic;}
+.c-hi { color:#10b981; text-shadow: 0 0 10px rgba(16,185,129,0.3);}
+.c-md { color:#f59e0b; text-shadow: 0 0 10px rgba(245,158,11,0.3);}
+.c-lo { color:#ef4444; text-shadow: 0 0 10px rgba(239,68,68,0.3);}
 
 /* ── HEALTH CHIPS ─────────────────────────────────────────────────────────── */
-.hc { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 14px; font-size:0.82rem; font-weight:600; border:1px solid transparent; }
+.hc { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:6px 16px; font-size:0.85rem; font-weight:700; border:1px solid transparent; }
 .hc-ok   { background:var(--ok-lt);   color:#065f46; border-color:#a7f3d0; }
-.hc-mild { background:var(--warn-lt); color:#78350f; border-color:#fde68a; }
-.hc-bad  { background:var(--err-lt);  color:#7f1d1d; border-color:#fecaca; }
+.hc-mild { background:var(--warn-lt); color:#92400e; border-color:#fde68a; }
+.hc-bad  { background:var(--err-lt);  color:#991b1b; border-color:#fecaca; }
 
 /* ── STREAMLIT COMPONENT OVERRIDES ───────────────────────────────────────── */
 
 /* Tabs */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap:2px !important; border-bottom:2px solid var(--s100) !important;
+    gap:8px !important; border-bottom:2px solid var(--s200) !important;
     background:transparent !important; padding-bottom:0 !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
-    font-family:var(--f-ui) !important; font-size:0.82rem !important; font-weight:500 !important;
-    color:var(--s500) !important; padding:0.5rem 0.85rem !important;
-    border-radius:var(--r-sm) var(--r-sm) 0 0 !important;
+    font-family:var(--f-ui) !important; font-size:0.9rem !important; font-weight:600 !important;
+    color:var(--s500) !important; padding:0.75rem 1.25rem !important;
+    border-radius:var(--r-md) var(--r-md) 0 0 !important;
     background:transparent !important; border:none !important;
-    border-bottom:2px solid transparent !important; margin-bottom:-2px !important;
+    border-bottom:3px solid transparent !important; margin-bottom:-2px !important;
     transition:all var(--t) !important;
 }
-[data-testid="stTabs"] [data-baseweb="tab"]:hover { color:var(--p) !important; background:var(--p-lt) !important; }
-[data-testid="stTabs"] [aria-selected="true"] { color:var(--p) !important; font-weight:600 !important; border-bottom:2px solid var(--p) !important; background:transparent !important; }
-div[data-testid="stTabPanel"] { padding-top:1.2rem !important; }
+[data-testid="stTabs"] [data-baseweb="tab"]:hover { color:var(--p-mid) !important; background:var(--s50) !important; }
+[data-testid="stTabs"] [aria-selected="true"] { color:var(--p) !important; border-bottom:3px solid var(--p) !important; background:var(--p-lt) !important; }
+div[data-testid="stTabPanel"] { padding-top:1.5rem !important; animation: slideUp 0.3s ease forwards;}
 
 /* Metrics */
-[data-testid="stMetric"] { background:var(--s50) !important; border:1px solid var(--s200) !important; border-radius:var(--r-md) !important; padding:1rem 1.1rem !important; }
-[data-testid="stMetric"] label { font-family:var(--f-ui) !important; font-size:0.7rem !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:0.1em !important; color:var(--s500) !important; }
-[data-testid="stMetric"] [data-testid="stMetricValue"] { font-family:var(--f-ui) !important; font-size:1.45rem !important; font-weight:700 !important; color:var(--s900) !important; letter-spacing:-0.03em !important; }
-[data-testid="stMetric"] [data-testid="stMetricDelta"] { font-size:0.71rem !important; }
+[data-testid="stMetric"] { 
+    background: linear-gradient(145deg, #ffffff, var(--s50)) !important; 
+    border: 1px solid var(--s200) !important; 
+    border-radius: var(--r-lg) !important; 
+    padding: 1.25rem 1.5rem !important; 
+    box-shadow: var(--shadow-sm) !important;
+    transition: transform var(--t), box-shadow var(--t) !important;
+}
+[data-testid="stMetric"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--s300) !important;
+}
+[data-testid="stMetric"] label { font-family:var(--f-ui) !important; font-size:0.75rem !important; font-weight:800 !important; text-transform:uppercase !important; letter-spacing:0.12em !important; color:var(--s500) !important; }
+[data-testid="stMetric"] [data-testid="stMetricValue"] { font-family:var(--f-ui) !important; font-size:1.75rem !important; font-weight:800 !important; color:var(--s900) !important; letter-spacing:-0.04em !important; margin-top: 4px !important;}
+[data-testid="stMetric"] [data-testid="stMetricDelta"] { font-size:0.8rem !important; font-weight: 600 !important;}
 
 /* Buttons */
-[data-testid="stButton"] > button { font-family:var(--f-ui) !important; font-size:0.875rem !important; font-weight:600 !important; border-radius:var(--r-md) !important; transition:all var(--t) !important; }
-[data-testid="stButton"] > button[kind="primary"] { background:var(--p) !important; border:none !important; color:#fff !important; letter-spacing:0.01em !important; }
-[data-testid="stButton"] > button[kind="primary"]:hover { background:var(--p-dk) !important; transform:translateY(-1px) !important; }
-[data-testid="stButton"] > button[kind="secondary"] { background:transparent !important; border:1px solid var(--s300) !important; color:var(--s700) !important; }
-[data-testid="stButton"] > button[kind="secondary"]:hover { border-color:var(--p) !important; color:var(--p) !important; }
+[data-testid="stButton"] > button { font-family:var(--f-ui) !important; font-size:0.9rem !important; font-weight:700 !important; border-radius:var(--r-md) !important; padding: 0.5rem 1rem !important; transition:all var(--t) !important; }
+[data-testid="stButton"] > button[kind="primary"] { 
+    background: linear-gradient(135deg, var(--p), var(--p-dk)) !important; 
+    border:none !important; color:#fff !important; letter-spacing:0.02em !important; 
+    box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2) !important;
+}
+[data-testid="stButton"] > button[kind="primary"]:hover { 
+    background: linear-gradient(135deg, var(--p-mid), var(--p)) !important; 
+    transform:translateY(-2px) !important; 
+    box-shadow: 0 6px 12px rgba(79, 70, 229, 0.3) !important;
+}
+[data-testid="stButton"] > button[kind="secondary"] { background:#fff !important; border:1px solid var(--s300) !important; color:var(--s700) !important; box-shadow: var(--shadow-sm) !important;}
+[data-testid="stButton"] > button[kind="secondary"]:hover { border-color:var(--p) !important; color:var(--p) !important; transform:translateY(-1px) !important; box-shadow: var(--shadow-md) !important;}
 
 /* Inputs */
 [data-testid="stSelectbox"] > div > div,
 [data-testid="stTextInput"] > div > div,
 [data-testid="stNumberInput"] > div > div {
     border-radius:var(--r-md) !important; border:1px solid var(--s200) !important;
-    font-family:var(--f-ui) !important; font-size:0.875rem !important;
-    transition:border-color var(--t) !important;
+    font-family:var(--f-ui) !important; font-size:0.9rem !important;
+    background: #fff !important;
+    transition:all var(--t) !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }
 [data-testid="stSelectbox"] > div > div:focus-within,
 [data-testid="stTextInput"] > div > div:focus-within,
 [data-testid="stNumberInput"] > div > div:focus-within {
-    border-color:var(--p) !important; box-shadow:0 0 0 3px rgba(99,102,241,0.12) !important;
+    border-color:var(--p-mid) !important; box-shadow:0 0 0 3px rgba(99,102,241,0.15) !important;
 }
 
 /* File uploader */
 [data-testid="stFileUploader"] {
-    border:2px dashed var(--s200) !important; border-radius:var(--r-lg) !important;
+    border:2px dashed var(--s300) !important; border-radius:var(--r-xl) !important;
     background:var(--s50) !important; transition:all var(--t) !important;
+    padding: 2rem !important;
 }
 [data-testid="stFileUploader"]:hover { border-color:var(--p-mid) !important; background:var(--p-lt) !important; }
 
 /* Expander */
-[data-testid="stExpander"] { border:1px solid var(--s200) !important; border-radius:var(--r-md) !important; background:#fff !important; overflow:hidden !important; }
-[data-testid="stExpander"] summary { font-family:var(--f-ui) !important; font-size:0.875rem !important; font-weight:500 !important; color:var(--s700) !important; padding:0.7rem 1rem !important; background:var(--s50) !important; border-bottom:1px solid var(--s100) !important; }
-[data-testid="stExpander"] summary:hover { background:var(--p-lt) !important; color:var(--p) !important; }
+[data-testid="stExpander"] { border:1px solid var(--s200) !important; border-radius:var(--r-lg) !important; background:#fff !important; overflow:hidden !important; box-shadow: var(--shadow-sm) !important;}
+[data-testid="stExpander"] summary { font-family:var(--f-ui) !important; font-size:0.95rem !important; font-weight:600 !important; color:var(--s800) !important; padding:1rem 1.25rem !important; background:var(--s50) !important; border-bottom:1px solid var(--s100) !important; }
+[data-testid="stExpander"] summary:hover { background:var(--p-lt) !important; color:var(--p-dk) !important; }
 
 /* Dataframe */
-[data-testid="stDataFrame"] { border:1px solid var(--s200) !important; border-radius:var(--r-md) !important; overflow:hidden !important; }
+[data-testid="stDataFrame"] { border:1px solid var(--s200) !important; border-radius:var(--r-md) !important; overflow:hidden !important; box-shadow: var(--shadow-sm) !important;}
 
 /* Alerts */
-[data-testid="stAlert"] { border-radius:var(--r-md) !important; border-width:1px !important; font-family:var(--f-ui) !important; font-size:0.875rem !important; }
+[data-testid="stAlert"] { border-radius:var(--r-md) !important; border-width:1px !important; font-family:var(--f-ui) !important; font-size:0.9rem !important; box-shadow: var(--shadow-sm) !important;}
 
 /* Download button */
-[data-testid="stDownloadButton"] > button { font-family:var(--f-ui) !important; font-size:0.875rem !important; font-weight:600 !important; border-radius:var(--r-md) !important; background:var(--ok) !important; color:#fff !important; border:none !important; }
-[data-testid="stDownloadButton"] > button:hover { background:#047857 !important; transform:translateY(-1px) !important; }
+[data-testid="stDownloadButton"] > button { font-family:var(--f-ui) !important; font-size:0.9rem !important; font-weight:700 !important; border-radius:var(--r-md) !important; background:var(--ok) !important; color:#fff !important; border:none !important; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2) !important;}
+[data-testid="stDownloadButton"] > button:hover { background:#047857 !important; transform:translateY(-2px) !important; box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3) !important; }
 
 /* Sliders */
-[data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] { background:var(--p) !important; border-color:var(--p) !important; }
+[data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] { background:var(--p) !important; border-color:var(--p) !important; box-shadow: 0 0 0 4px rgba(99,102,241,0.2) !important;}
 
 /* Code */
-code { font-family:var(--f-mono) !important; font-size:0.81rem !important; background:var(--s100) !important; border:1px solid var(--s200) !important; border-radius:var(--r-sm) !important; padding:1px 6px !important; color:var(--p-dk) !important; }
+code { font-family:var(--f-mono) !important; font-size:0.85rem !important; background:var(--s100) !important; border:1px solid var(--s200) !important; border-radius:var(--r-sm) !important; padding:2px 8px !important; color:var(--p-dk) !important; font-weight: 500;}
 pre code { background:var(--s900) !important; border:none !important; color:#e2e8f0 !important; padding:0 !important; }
-pre { background:var(--s900) !important; border-radius:var(--r-md) !important; padding:1rem 1.25rem !important; border:1px solid rgba(255,255,255,0.06) !important; }
+pre { background:var(--s900) !important; border-radius:var(--r-lg) !important; padding:1.25rem 1.5rem !important; border:1px solid rgba(255,255,255,0.1) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;}
 
 /* Checkboxes */
-[data-testid="stCheckbox"] label { font-family:var(--f-ui) !important; font-size:0.875rem !important; color:var(--s700) !important; }
+[data-testid="stCheckbox"] label { font-family:var(--f-ui) !important; font-size:0.9rem !important; color:var(--s800) !important; font-weight: 500 !important;}
 
 /* Spinner */
-[data-testid="stSpinner"] p { font-family:var(--f-ui) !important; font-size:0.875rem !important; color:var(--p) !important; }
+[data-testid="stSpinner"] p { font-family:var(--f-ui) !important; font-size:0.95rem !important; font-weight:600 !important; color:var(--p) !important; }
 
 /* Caption */
-[data-testid="stCaption"] { font-family:var(--f-ui) !important; font-size:0.77rem !important; color:var(--s400) !important; }
+[data-testid="stCaption"] { font-family:var(--f-ui) !important; font-size:0.8rem !important; color:var(--s500) !important; }
 
 /* JSON */
-[data-testid="stJson"] { border-radius:var(--r-md) !important; border:1px solid var(--s200) !important; font-family:var(--f-mono) !important; font-size:0.79rem !important; }
+[data-testid="stJson"] { border-radius:var(--r-lg) !important; border:1px solid var(--s200) !important; font-family:var(--f-mono) !important; font-size:0.85rem !important; background: #fff !important; padding: 1rem !important;}
 
 /* Plotly container */
-[data-testid="stPlotlyChart"] { border:1px solid var(--s100) !important; border-radius:var(--r-md) !important; overflow:hidden !important; background:#fff !important; }
+[data-testid="stPlotlyChart"] { border:1px solid var(--s200) !important; border-radius:var(--r-lg) !important; overflow:hidden !important; background:#fff !important; box-shadow: var(--shadow-sm) !important; transition: box-shadow var(--t) !important;}
+[data-testid="stPlotlyChart"]:hover { box-shadow: var(--shadow-md) !important; }
 
 /* Divider */
-hr { border:none !important; border-top:1px solid var(--s100) !important; margin:1.25rem 0 !important; }
+hr { border:none !important; border-top:1px solid var(--s200) !important; margin:1.5rem 0 !important; }
 
 /* Form submit */
-[data-testid="stForm"] [data-testid="stButton"] > button[kind="primary"] { background:var(--p) !important; width:100% !important; }
+[data-testid="stForm"] [data-testid="stButton"] > button[kind="primary"] { background: linear-gradient(135deg, var(--p), var(--p-dk)) !important; width:100% !important; padding: 0.75rem !important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -545,11 +621,11 @@ def render_dataset_upload():
     col1, col2, col3 = st.columns(3)
     sample_dataset = None
     with col1:
-        if st.button("🌸 Iris — classification", use_container_width=True):   sample_dataset = 'iris'
+        if st.button("🌸 Iris — classification", width='stretch'):   sample_dataset = 'iris'
     with col2:
-        if st.button("🍷 Wine — classification", use_container_width=True):   sample_dataset = 'wine'
+        if st.button("🍷 Wine — classification", width='stretch'):   sample_dataset = 'wine'
     with col3:
-        if st.button("🏠 California — regression", use_container_width=True): sample_dataset = 'california'
+        if st.button("🏠 California — regression", width='stretch'): sample_dataset = 'california'
 
     if uploaded_file is not None or sample_dataset:
         try:
@@ -589,7 +665,7 @@ def render_dataset_upload():
 
             t1, t2 = st.tabs(["Data preview","Column details"])
             with t1:
-                st.dataframe(df.head(10), use_container_width=True)
+                st.dataframe(df.head(10), width='stretch')
             with t2:
                 md = df.isnull().sum()
                 mp = (md / len(df) * 100).round(2)
@@ -597,7 +673,7 @@ def render_dataset_upload():
                                    'Unique':[df[c].nunique() for c in df.columns],
                                    'Missing':md.values,'Missing %':mp.values})
                 st.dataframe(ci.style.background_gradient(subset=['Missing %'],cmap='Reds',vmin=0,vmax=100),
-                             use_container_width=True, hide_index=True)
+                             width='stretch', hide_index=True)
 
             _section("Configure","Select target column")
 
@@ -636,7 +712,7 @@ def render_dataset_upload():
                                               title=f"Distribution — {target_col}",
                                               color_discrete_sequence=["#4f46e5"]))
                         f.update_layout(showlegend=False)
-                        st.plotly_chart(f, use_container_width=True)
+                        st.plotly_chart(f, width='stretch')
                     else:
                         vc = df[target_col].value_counts().reset_index()
                         vc.columns = [target_col, 'count']
@@ -644,7 +720,7 @@ def render_dataset_upload():
                                         title=f"Class distribution — {target_col}",
                                         color_discrete_sequence=["#4f46e5"]))
                         f.update_layout(showlegend=False)
-                        st.plotly_chart(f, use_container_width=True)
+                        st.plotly_chart(f, width='stretch')
             else:
                 st.session_state.target_col   = None
                 st.session_state.problem_type = None
@@ -667,7 +743,7 @@ def render_data_quality():
     df = st.session_state.df
     cb, ch = st.columns([1,3])
     with cb:
-        run_check = st.button("🔍 Run quality check", type="primary", use_container_width=True)
+        run_check = st.button("🔍 Run quality check", type="primary", width='stretch')
     with ch:
         st.caption("Checks for missing values, duplicates, outliers, and constant columns.")
 
@@ -710,8 +786,8 @@ def render_data_quality():
                             title='Missing values per column (%)',
                             color='Percentage', color_continuous_scale=['#e0e7ff','#4f46e5'], text_auto='.1f'))
             f.update_layout(coloraxis_showscale=False)
-            st.plotly_chart(f, use_container_width=True)
-            st.dataframe(mdf, use_container_width=True, hide_index=True)
+            st.plotly_chart(f, width='stretch')
+            st.dataframe(mdf, width='stretch', hide_index=True)
         else:
             st.success("✅ No missing values.")
 
@@ -732,8 +808,8 @@ def render_data_quality():
                             title='Outlier rate per column (%)',
                             color='Percentage', color_continuous_scale=['#fef3c7','#d97706'], text_auto='.1f'))
             f.update_layout(coloraxis_showscale=False)
-            st.plotly_chart(f, use_container_width=True)
-            st.dataframe(odf, use_container_width=True, hide_index=True)
+            st.plotly_chart(f, width='stretch')
+            st.dataframe(odf, width='stretch', hide_index=True)
         else:
             st.success("✅ No significant outliers.")
 
@@ -770,7 +846,7 @@ def render_eda():
     df = st.session_state.df
     cb, ch = st.columns([1,3])
     with cb:
-        run_eda = st.button("📊 Run EDA", type="primary", use_container_width=True)
+        run_eda = st.button("📊 Run EDA", type="primary", width='stretch')
     with ch:
         st.caption("Generates summary statistics, correlations, and distribution plots.")
 
@@ -803,16 +879,16 @@ def render_eda():
                           title='Column type breakdown',
                           color_discrete_sequence=['#4f46e5','#7c3aed','#0284c7']))
         f.update_traces(textfont_size=12)
-        st.plotly_chart(f, use_container_width=True)
+        st.plotly_chart(f, width='stretch')
 
     with tabs[1]:
         stats = results['summary_statistics']
         if 'numeric' in stats:
             st.markdown("**Numeric summary**")
-            st.dataframe(stats['numeric'].style.format(precision=3), use_container_width=True)
+            st.dataframe(stats['numeric'].style.format(precision=3), width='stretch')
         if 'categorical' in stats:
             st.markdown("**Categorical summary**")
-            st.dataframe(stats['categorical'], use_container_width=True)
+            st.dataframe(stats['categorical'], width='stretch')
 
     with tabs[2]:
         corr = results['correlation_analysis']
@@ -820,11 +896,11 @@ def render_eda():
             hf = engine.generate_correlation_heatmap(use_plotly=True)
             if hf:
                 hf.update_layout(**_PL)
-                st.plotly_chart(hf, use_container_width=True)
+                st.plotly_chart(hf, width='stretch')
         if corr.get('high_correlation_pairs'):
             st.markdown("**Highly correlated pairs**")
             st.dataframe(pd.DataFrame(corr['high_correlation_pairs']),
-                         use_container_width=True, hide_index=True)
+                         width='stretch', hide_index=True)
         else:
             st.info("No high-correlation pairs above threshold.")
 
@@ -837,7 +913,7 @@ def render_eda():
             fs = engine.generate_distribution_plots([sc], use_plotly=True)
             if fs:
                 fs[0][1].update_layout(**_PL)
-                st.plotly_chart(fs[0][1], use_container_width=True)
+                st.plotly_chart(fs[0][1], width='stretch')
             ds = results['distributions']['distribution_stats'].get(sc, {})
             if ds:
                 d1,d2,d3,d4 = st.columns(4)
@@ -858,7 +934,7 @@ def render_eda():
                               color=vc.values, color_continuous_scale=['#e0e7ff','#4f46e5'],
                               text_auto=True))
             f2.update_layout(coloraxis_showscale=False, yaxis=dict(autorange='reversed'))
-            st.plotly_chart(f2, use_container_width=True)
+            st.plotly_chart(f2, width='stretch')
 
 
 # ── render_ai_insights ────────────────────────────────────────────────────────
@@ -879,7 +955,7 @@ def render_ai_insights():
 
     cb, ch = st.columns([1,3])
     with cb:
-        run_ai = st.button("🧠 Generate insights", type="primary", use_container_width=True)
+        run_ai = st.button("🧠 Generate insights", type="primary", width='stretch')
     with ch:
         st.caption("Surfaces patterns, preprocessing advice, and model recommendations.")
 
@@ -932,10 +1008,10 @@ def render_ai_insights():
 
     if ins.get('important_features'):
         st.markdown("#### Important features")
-        st.dataframe(pd.DataFrame(ins['important_features']), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(ins['important_features']), width='stretch', hide_index=True)
     if ins.get('model_recommendations'):
         st.markdown("#### Recommended models")
-        st.dataframe(pd.DataFrame(ins['model_recommendations']), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(ins['model_recommendations']), width='stretch', hide_index=True)
 
 
 # ── render_automl ─────────────────────────────────────────────────────────────
@@ -954,8 +1030,14 @@ def render_automl():
 
     with st.expander("⚙️ Training settings", expanded=True):
         c1, c2 = st.columns(2)
-        with c1: test_size = st.slider("Test split",0.10,0.40,0.20,0.05, format="%.0f%%")
-        with c2: cv_folds  = st.slider("CV folds",3,10,5)
+        with c1: 
+            # Use whole numbers for the slider UI (10, 40, 20, 5)
+            test_size_int = st.slider("Test split", 10, 40, 20, 5, format="%d%%")
+            # Convert it back to a float (0.10 - 0.40) for your backend logic
+            test_size = test_size_int / 100.0
+            
+        with c2: 
+            cv_folds  = st.slider("CV folds", 3, 10, 5)
 
     st.markdown(
         '<div style="font-size:0.77rem;font-weight:700;color:var(--s500);'
@@ -964,20 +1046,44 @@ def render_automl():
     )
 
     is_clf = st.session_state.problem_type in ['binary_classification','multiclass_classification']
-    avm    = ({'Logistic Regression':'logistic_regression','Random Forest':'random_forest',
-               'Gradient Boosting':'gradient_boosting','XGBoost':'xgboost'}
-              if is_clf else
-              {'Linear Regression':'linear_regression','Ridge':'ridge',
-               'Random Forest':'random_forest','Gradient Boosting':'gradient_boosting','XGBoost':'xgboost'})
+    
+    # 1. Update the dictionaries to include all our new models
+    if is_clf:
+        avm = {
+            'Logistic Regression': 'logistic_regression',
+            'Naive Bayes': 'naive_bayes',
+            'KNN': 'knn',
+            'SVM': 'svm',
+            'Random Forest': 'random_forest',
+            'Gradient Boosting': 'gradient_boosting',
+            'XGBoost': 'xgboost',
+            'LightGBM': 'lightgbm'
+        }
+    else:
+        avm = {
+            'Linear Regression': 'linear_regression',
+            'Ridge': 'ridge',
+            'Lasso': 'lasso',
+            'ElasticNet': 'elasticnet',
+            'KNN': 'knn',
+            'SVM': 'svm',
+            'Random Forest': 'random_forest',
+            'Gradient Boosting': 'gradient_boosting',
+            'XGBoost': 'xgboost',
+            'LightGBM': 'lightgbm'
+        }
 
-    sel, mc = [], st.columns(len(avm))
-    for i,(name,key) in enumerate(avm.items()):
-        with mc[i]:
-            if st.checkbox(name, value=True, key=f"m_{key}"): sel.append(key)
+    # 2. Use a 4-column grid layout so the checkboxes wrap nicely
+    sel = []
+    cols = st.columns(4)
+    for i, (name, key) in enumerate(avm.items()):
+        with cols[i % 4]: # The % 4 makes it wrap to the next row automatically
+            if st.checkbox(name, value=True, key=f"m_{key}"): 
+                sel.append(key)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("🚀 Start training", type="primary", use_container_width=True):
+    if st.button("🚀 Start training", type="primary", width='stretch'):
         if not sel: st.error("Select at least one model."); return
         with st.spinner(f"Training {len(sel)} model(s)…"):
             try:
@@ -1027,7 +1133,7 @@ def render_automl():
     with st.expander("Full tradeoff table", expanded=True):
         tdf = pd.DataFrame(reasoning['tradeoff_analysis'])
         st.dataframe(tdf[['model','cv_mean','test_score','overfit_status','interpretability','tradeoff_summary']],
-                     use_container_width=True, hide_index=True)
+                     width='stretch', hide_index=True)
 
     mk  = 'accuracy' if is_clf else 'r2'
     f   = _fig(px.bar(results['comparison'], x='model', y=mk,
@@ -1036,7 +1142,7 @@ def render_automl():
                       title=f"Performance ({mk.upper()}) · coloured by overfit risk",
                       text_auto='.3f'))
     f.update_layout(legend_title_text='Overfit risk')
-    st.plotly_chart(f, use_container_width=True)
+    st.plotly_chart(f, width='stretch')
 
     if results.get('feature_importance') is not None:
         _section("Explainability","Feature importance (top 10)")
@@ -1047,7 +1153,7 @@ def render_automl():
                          text_auto='.3f'))
         ff.update_layout(coloraxis_showscale=False,
                          yaxis=dict(autorange='reversed', categoryorder='total ascending'))
-        st.plotly_chart(ff, use_container_width=True)
+        st.plotly_chart(ff, width='stretch')
 
 
 # ── render_model_evaluation ───────────────────────────────────────────────────
@@ -1125,7 +1231,7 @@ def render_model_evaluation():
                       annotation_text=f"Mean {mu:.4f}", annotation_font_color='#dc2626')
         fig.update_layout(**_PL, xaxis_title='CV fold', yaxis_title='Score',
                           title='Score stability across folds')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with tabs[3]:
         st.json({"metrics":mr['metrics'],"train_metrics":mr['train_metrics'],
@@ -1210,7 +1316,7 @@ def render_predictions():
                         else:
                             input_data[fn] = st.number_input(fn, value=0.0, step=0.1, format="%.4f", key=f"s_{idx}")
 
-            if st.form_submit_button("🔮 Predict", type="primary", use_container_width=True):
+            if st.form_submit_button("🔮 Predict", type="primary", width='stretch'):
                 try:
                     X_new = pd.DataFrame([input_data])[feature_names]
                     pred  = engine.predict(X_new)[0]
@@ -1225,7 +1331,7 @@ def render_predictions():
                                 if len(proba)<=10:
                                     f = _fig(px.bar(pd.DataFrame({'Class':range(len(proba)),'Probability':proba}),
                                                     x='Class',y='Probability',color_discrete_sequence=['#4f46e5']))
-                                    st.plotly_chart(f, use_container_width=True)
+                                    st.plotly_chart(f, width='stretch')
                         except Exception as e: st.warning(f"Could not compute probabilities: {e}")
                     st.success("✅ Done!")
                     st.session_state.last_prediction = {'input':input_data,'prediction':pred}
@@ -1255,15 +1361,15 @@ def render_predictions():
                             df_r['confidence'] = np.max(probs,axis=1).round(4)
                         except Exception: pass
                     st.success(f"✅ {len(preds):,} predictions generated.")
-                    st.dataframe(df_r, use_container_width=True, hide_index=True)
+                    st.dataframe(df_r, width='stretch', hide_index=True)
                     st.download_button("📥 Download predictions (CSV)",
                                        df_r.to_csv(index=False).encode('utf-8'),
-                                       "predictions.csv","text/csv",use_container_width=True)
+                                       "predictions.csv","text/csv",width='stretch')
                     if problem_type=='regression' and len(preds)>1:
                         f = _fig(px.histogram(preds, nbins=30, title='Prediction distribution',
                                               color_discrete_sequence=['#4f46e5']))
                         f.update_layout(showlegend=False)
-                        st.plotly_chart(f, use_container_width=True)
+                        st.plotly_chart(f, width='stretch')
             except Exception as e: st.error(f"Batch error: {e}")
 
     with t3:
@@ -1307,7 +1413,7 @@ def render_deployment():
         st.caption("Exports the full sklearn pipeline as a `.pkl` file.")
         model_name = st.text_input("Model name","trained_model",key="save_name")
 
-        if st.button("💾 Export model", type="primary", use_container_width=True):
+        if st.button("💾 Export model", type="primary", width='stretch'):
             with st.spinner("Saving…"):
                 try:
                     deployer = ModelDeployer()
@@ -1325,7 +1431,7 @@ def render_deployment():
                     with open(fp,'rb') as fh:
                         st.download_button("📥 Download model file", fh.read(),
                                            file_name=os.path.basename(fp),
-                                           mime='application/octet-stream',use_container_width=True)
+                                           mime='application/octet-stream',width='stretch')
                 except Exception as e: st.error(f"Save failed: {e}")
 
     with c2:
@@ -1333,7 +1439,7 @@ def render_deployment():
         st.caption("Generates a ready-to-run REST API with Swagger docs.")
         api_port = st.number_input("Port",8000,9000,8000)
 
-        if st.button("🌐 Generate API", type="primary", use_container_width=True):
+        if st.button("🌐 Generate API", type="primary", width='stretch'):
             with st.spinner("Generating API…"):
                 try:
                     deployer = ModelDeployer()
