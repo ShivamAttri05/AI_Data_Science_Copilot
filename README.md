@@ -57,7 +57,8 @@ AI_Data_Science_Copilot/
 ### 1. Clone & Install
 
 ```bash
-cd d:/My_Projects/AI_Data_Science_Copilot
+git clone https://github.com/ShivamAttri05/AI_Data_Science_Copilot.git
+cd AI_Data_Science_Copilot
 pip install -r requirements.txt
 ```
 
